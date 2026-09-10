@@ -5,50 +5,29 @@ import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
 import co.edu.uniquindio.sga.domain.valueobject.CodigoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.Estancia;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
+import co.edu.uniquindio.sga.domain.valueobject.FechaCreacion;
+import co.edu.uniquindio.sga.domain.valueobject.UmbralEdadFacturable;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Compromiso de ocupar un apartamento durante una estancia.
+ * Compromiso de ocupar un apartamento durante una estancia,
+ * para un conjunto definido de ocupantes.
  */
 public class Reserva {
 
-    /**
-     * Identidad de la reserva.
-     */
     private final CodigoReserva codigo;
-
-    /**
-     * El canal por donde nació la reserva no cambia.
-     */
     private final CanalOrigen canalOrigen;
-
-    /**
-     * Momento de creación.
-     */
-    private final LocalDate fechaCreacion;
-
-    /**
-     * Persona responsable de la reserva.
-     */
+    private final FechaCreacion fechaCreacion;
     private final Ocupante titular;
 
     private Apartamento apartamento;
-
     private Estancia estancia;
-
     private List<Ocupante> ocupantes;
-
     private EstadoReserva estado;
 
-    /**
-     * Constructor privado.
-     *
-     * Una reserva únicamente puede ser creada
-     * mediante Reserva.crear(...).
-     */
     private Reserva(
             CodigoReserva codigo,
             Apartamento apartamento,
@@ -56,32 +35,18 @@ public class Reserva {
             Ocupante titular,
             List<Ocupante> ocupantes,
             CanalOrigen canalOrigen,
-            LocalDate fechaCreacion
+            FechaCreacion fechaCreacion
     ) {
-
         this.codigo = codigo;
         this.apartamento = apartamento;
         this.estancia = estancia;
         this.titular = titular;
-
-        /*
-         * Copia inmutable para impedir que alguien modifique
-         * la lista desde fuera y se salte RN-02.
-         */
         this.ocupantes = List.copyOf(ocupantes);
-
         this.canalOrigen = canalOrigen;
         this.fechaCreacion = fechaCreacion;
-
-        /*
-         * Toda reserva nace PENDIENTE.
-         */
         this.estado = EstadoReserva.PENDIENTE;
     }
 
-    /**
-     * Única puerta de entrada para crear una reserva.
-     */
     public static Reserva crear(
             CodigoReserva codigo,
             Apartamento apartamento,
@@ -89,6 +54,7 @@ public class Reserva {
             Ocupante titular,
             List<Ocupante> ocupantes,
             CanalOrigen canalOrigen,
+            UmbralEdadFacturable umbralEdadFacturable,
             LocalDate fechaActual
     ) {
 
@@ -118,7 +84,13 @@ public class Reserva {
 
         if (canalOrigen == null) {
             throw new ReglaDominioException(
-                    "La reserva debe indicar el canal de origen"
+                    "La reserva debe indicar su canal de origen"
+            );
+        }
+
+        if (umbralEdadFacturable == null) {
+            throw new ReglaDominioException(
+                    "El umbral de edad facturable es obligatorio"
             );
         }
 
@@ -140,21 +112,12 @@ public class Reserva {
             );
         }
 
-        /*
-         * El titular también debe formar parte del grupo.
-         */
         if (!ocupantes.contains(titular)) {
             throw new ReglaDominioException(
                     "El titular debe ser uno de los ocupantes"
             );
         }
 
-        /*
-         * No permitimos repetir una misma persona.
-         * Como Ocupante.equals() funciona por documento,
-         * dos ocupantes con el mismo documento cuentan
-         * como la misma persona.
-         */
         if (ocupantes.stream().distinct().count() != ocupantes.size()) {
             throw new ReglaDominioException(
                     "No se puede repetir un ocupante en la reserva"
@@ -162,8 +125,17 @@ public class Reserva {
         }
 
         /*
+         * El titular debe ser facturable.
+         */
+        if (!titular.esFacturableEn(estancia, umbralEdadFacturable)) {
+            throw new ReglaDominioException(
+                    "El titular debe ser un ocupante facturable"
+            );
+        }
+
+        /*
          * RN-04:
-         * No se pueden crear reservas hacia el pasado.
+         * No se crean reservas hacia el pasado.
          */
         if (estancia.fechaEntrada().isBefore(fechaActual)) {
             throw new ReglaDominioException(
@@ -171,9 +143,6 @@ public class Reserva {
             );
         }
 
-        /*
-         * El apartamento debe continuar activo.
-         */
         if (!apartamento.estaActivo()) {
             throw new ReglaDominioException(
                     "El apartamento no está disponible para la venta"
@@ -182,12 +151,28 @@ public class Reserva {
 
         /*
          * RN-02:
-         * Todos los ocupantes cuentan para la capacidad,
-         * sean facturables o no.
+         * Todos los ocupantes cuentan para la capacidad.
          */
         if (!apartamento.admite(ocupantes.size())) {
             throw new ReglaDominioException(
                     "El número de ocupantes excede la capacidad del apartamento"
+            );
+        }
+
+        /*
+         * La fecha actual pasa a convertirse en la fecha
+         * de creación de la nueva reserva.
+         */
+        FechaCreacion fechaCreacion =
+                new FechaCreacion(fechaActual);
+
+        /*
+         * RES-YYYY-NNNNN:
+         * YYYY debe corresponder al año de creación.
+         */
+        if (!codigo.correspondeA(fechaCreacion)) {
+            throw new ReglaDominioException(
+                    "El año del código de reserva debe coincidir con el año de creación"
             );
         }
 
@@ -198,13 +183,10 @@ public class Reserva {
                 titular,
                 ocupantes,
                 canalOrigen,
-                fechaActual
+                fechaCreacion
         );
     }
 
-    /**
-     * Número total de personas que ocuparán el apartamento.
-     */
     public int totalOcupantes() {
         return ocupantes.size();
     }
@@ -217,7 +199,7 @@ public class Reserva {
         return canalOrigen;
     }
 
-    public LocalDate getFechaCreacion() {
+    public FechaCreacion getFechaCreacion() {
         return fechaCreacion;
     }
 
@@ -233,9 +215,6 @@ public class Reserva {
         return estancia;
     }
 
-    /**
-     * La lista ya es inmutable.
-     */
     public List<Ocupante> getOcupantes() {
         return ocupantes;
     }

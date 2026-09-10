@@ -5,10 +5,10 @@ import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import java.util.regex.Pattern;
 
 /**
- * Código único de una reserva.
+ * Código único e inmutable de una reserva.
  *
- * Ejemplo:
- * RES-2026-00042
+ * Formato:
+ * RES-YYYY-NNNNN
  */
 public record CodigoReserva(String valor) {
 
@@ -30,5 +30,24 @@ public record CodigoReserva(String valor) {
                     "El código de la reserva debe tener el formato RES-YYYY-NNNNN"
             );
         }
+    }
+
+    public int anio() {
+        return Integer.parseInt(valor.substring(4, 8));
+    }
+
+    /**
+     * Verifica que el año incluido en el código corresponda
+     * al año de creación de la reserva.
+     */
+    public boolean correspondeA(FechaCreacion fechaCreacion) {
+
+        if (fechaCreacion == null) {
+            throw new ReglaDominioException(
+                    "La fecha de creación es obligatoria"
+            );
+        }
+
+        return anio() == fechaCreacion.anio();
     }
 }
