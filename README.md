@@ -1,5 +1,7 @@
 # SGA - Sistema de Gestión de Alojamiento
 
+> Estado de la entrega actualizado: [implementación de reservas y validación](IMPLEMENTACION_ENTREGA_1.md). Los apartados de modelo y próximos pasos de este README describen la base inicial; consulta ese documento para el estado de las Guías 05 y 06.
+
 Proyecto desarrollado para la asignatura **Programación Avanzada** del programa de Ingeniería de Sistemas y Computación de la **Universidad del Quindío**.
 
 El SGA tiene como propósito administrar un alojamiento turístico compuesto por apartamentos independientes, permitiendo gestionar apartamentos, reservas, estancias, ocupantes, disponibilidad, temporadas, tarifas, folios, pagos y bloqueos.
