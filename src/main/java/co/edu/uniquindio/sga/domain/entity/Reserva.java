@@ -223,6 +223,21 @@ public class Reserva {
         return estado;
     }
 
+    public void registrarSalida() {
+        // TODO: Integrante 1 - Completar reglas de dominio e historial (Guía 05)
+        this.estado = EstadoReserva.FINALIZADA;
+    }
+
+    public void declararNoShow() {
+        // TODO: Integrante 1 - Completar reglas de dominio e historial (Guía 05)
+        this.estado = EstadoReserva.NO_SHOW;
+    }
+
+    public void cancelar(String motivo) {
+        // TODO: Integrante 1 - Completar reglas de dominio e historial (Guía 05)
+        this.estado = EstadoReserva.CANCELADA;
+    }
+
     @Override
     public boolean equals(Object objeto) {
 
