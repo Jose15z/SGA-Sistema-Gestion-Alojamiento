@@ -1,0 +1,1105 @@
+openapi: 3.1.0
+info:
+  title: Sistema de Gestión de Alojamiento (SGA) API
+  description: >-
+    Especificación de la API RESTful para el Sistema de Gestión de Alojamiento (SGA),
+    diseñada siguiendo los principios de Diseño Orientado al Dominio (DDD) y
+    Arquitectura Hexagonal.
+  version: 1.0.0
+servers:
+  - url: https://api.sga.uniquindio.edu.co/api
+    description: Servidor de producción
+  - url: http://localhost:8080/api
+    description: Servidor local de desarrollo
+tags:
+  - name: Disponibilidad
+    description: Consulta de disponibilidad de apartamentos y cotizaciones de estancias
+  - name: Reservas
+    description: Orquestación del ciclo de vida de las reservas de alojamiento
+  - name: Folios
+    description: Gestión de cuentas de huéspedes, registro de cargos, pagos y liquidación
+paths:
+  /cotizaciones:
+    post:
+      tags:
+        - Disponibilidad
+      summary: Cotizar el valor de una estancia
+      description: >-
+        Evalúa las reglas de tarificación por noche, ocupantes facturables según su
+        fecha de nacimiento al día de entrada y descuentos por estancia prolongada.
+        Responde 200 OK puesto que es una operación de cálculo sin persistencia.
+      operationId: cotizarEstancia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CotizacionRequest'
+      responses:
+        '200':
+          description: Cotización calculada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CotizacionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /apartamentos/disponibles:
+    get:
+      tags:
+        - Disponibilidad
+      summary: Consultar apartamentos disponibles
+      description: >-
+        Lista de apartamentos que cumplen con las fechas de estancia, capacidad para el grupo,
+        tiempos de preparación operativa y ausencia de bloqueos o reservas solapadas.
+      operationId: consultarApartamentosDisponibles
+      parameters:
+        - name: fechaEntrada
+          in: query
+          required: true
+          description: Fecha de llegada (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: '2026-12-10'
+        - name: fechaSalida
+          in: query
+          required: true
+          description: Fecha de salida (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: '2026-12-15'
+        - name: totalOcupantes
+          in: query
+          required: true
+          description: Número total de personas en el grupo
+          schema:
+            type: integer
+            minimum: 1
+            example: 3
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Listado paginado de apartamentos disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaApartamentosDisponibles'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /reservas:
+    post:
+      tags:
+        - Reservas
+      summary: Crear una nueva reserva
+      description: >-
+        Crea una reserva en estado PENDIENTE, congela la tarifa y política de cancelación
+        vigentes, y abre el folio asociado con el cargo inicial de alojamiento.
+      operationId: crearReserva
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearReservaRequest'
+      responses:
+        '201':
+          description: Reserva creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      tags:
+        - Reservas
+      summary: Listar reservas registradas
+      description: Consulta de reservas con filtrado opcional por estado y paginación estricta.
+      operationId: listarReservas
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          description: Estado del ciclo de vida para filtrar
+          schema:
+            $ref: '#/components/schemas/EstadoReserva'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Listado paginado de reservas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaReservas'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /reservas/{codigo}:
+    get:
+      tags:
+        - Reservas
+      summary: Obtener el detalle de una reserva
+      description: Retorna toda la información de una reserva específica a partir de su código único.
+      operationId: obtenerReservaPorCodigo
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      responses:
+        '200':
+          description: Detalle de la reserva consultada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reservas/{codigo}/confirmar:
+    put:
+      tags:
+        - Reservas
+      summary: Confirmar una reserva
+      description: >-
+        Transiciona una reserva de PENDIENTE a CONFIRMADA tras comprobar que el folio
+        cuenta con el anticipo requerido dentro del plazo límite.
+      operationId: confirmarReserva
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccionOperativaRequest'
+      responses:
+        '200':
+          description: Reserva confirmada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /reservas/{codigo}/registrar-llegada:
+    put:
+      tags:
+        - Reservas
+      summary: Registrar la llegada de los huéspedes (Check-in)
+      description: >-
+        Marca la reserva en estado EN_CURSO y coordina con el agregado Apartamento
+        su transición a estado OCUPADO.
+      operationId: registrarLlegada
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccionOperativaRequest'
+      responses:
+        '200':
+          description: Llegada registrada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /reservas/{codigo}/registrar-salida:
+    put:
+      tags:
+        - Reservas
+      summary: Registrar la salida de los huéspedes (Check-out)
+      description: >-
+        Transiciona la reserva a estado FINALIZADA y libera el apartamento dejándolo
+        en estado PENDIENTE_PREPARACION. Exige que el folio de la cuenta esté cerrado.
+      operationId: registrarSalida
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccionOperativaRequest'
+      responses:
+        '200':
+          description: Salida registrada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /reservas/{codigo}/cancelar:
+    put:
+      tags:
+        - Reservas
+      summary: Cancelar una reserva
+      description: >-
+        Cancela una reserva pendiente o confirmada. Aplica la retención correspondiente
+        de acuerdo con la versión histórica de la política de cancelación congelada.
+      operationId: cancelarReserva
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelarReservaRequest'
+      responses:
+        '200':
+          description: Reserva cancelada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /reservas/{codigo}/no-show:
+    put:
+      tags:
+        - Reservas
+      summary: Declarar No-Show por inasistencia del titular
+      description: >-
+        Aplica el estado NO_SHOW a una reserva confirmada si el titular no se presenta
+        tras la hora límite establecida y sin novedades pendientes de resolución.
+      operationId: declararNoShow
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccionOperativaRequest'
+      responses:
+        '200':
+          description: Inasistencia declarada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservaDetalleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /folios/{codigoReserva}:
+    get:
+      tags:
+        - Folios
+      summary: Consultar el folio de una reserva
+      description: Retorna el estado de la cuenta, desglose de cargos, pagos y el saldo derivado actual.
+      operationId: obtenerFolioPorReserva
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      responses:
+        '200':
+          description: Folio obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolioResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /folios/{codigoReserva}/pagos:
+    post:
+      tags:
+        - Folios
+      summary: Registrar un pago o devolución en el folio
+      description: >-
+        Añade un abono o movimiento de devolución a la cuenta del folio. No permite
+        devolver más dinero del que ha sido efectivamente pagado.
+      operationId: registrarPagoFolio
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarPagoRequest'
+      responses:
+        '201':
+          description: Pago registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /folios/{codigoReserva}/cargos:
+    post:
+      tags:
+        - Folios
+      summary: Registrar un cargo adicional en el folio
+      description: Añade cargos por consumos o penalidades en una cuenta abierta.
+      operationId: registrarCargoFolio
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarCargoRequest'
+      responses:
+        '201':
+          description: Cargo registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CargoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /folios/{codigoReserva}/cerrar:
+    put:
+      tags:
+        - Folios
+      summary: Cerrar el folio de una cuenta
+      description: >-
+        Cierra el folio definitivamente. Si el saldo no es cero, requiere obligatoriamente
+        el registro de la autorización por parte de la administración.
+      operationId: cerrarFolio
+      parameters:
+        - $ref: '#/components/parameters/CodigoReservaParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CerrarFolioRequest'
+      responses:
+        '200':
+          description: Folio cerrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+components:
+  parameters:
+    CodigoReservaParam:
+      name: codigo
+      in: path
+      required: true
+      description: Código único de la reserva (ejemplo RES-2026-00001)
+      schema:
+        type: string
+        pattern: '^RES-[0-9]{4}-[0-9]{5}$'
+        example: 'RES-2026-00001'
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Número de página (inicia en 0)
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+        example: 0
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Cantidad máxima de registros por página (máximo estricto 10)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10
+        default: 10
+        example: 10
+
+  schemas:
+    EstadoReserva:
+      type: string
+      enum:
+        - PENDIENTE
+        - CONFIRMADA
+        - EN_CURSO
+        - FINALIZADA
+        - CANCELADA
+        - NO_SHOW
+      example: PENDIENTE
+
+    CanalOrigen:
+      type: string
+      enum:
+        - DIRECTO
+        - PORTAL
+        - EXTERNO
+      example: DIRECTO
+
+    OcupanteCotizacionRequest:
+      type: object
+      required:
+        - fechaNacimiento
+      properties:
+        fechaNacimiento:
+          type: string
+          format: date
+          description: Fecha de nacimiento del huésped para cálculo de facturación
+          example: '1995-04-12'
+
+    CotizacionRequest:
+      type: object
+      required:
+        - identificacionApartamento
+        - fechaEntrada
+        - fechaSalida
+        - ocupantes
+      properties:
+        identificacionApartamento:
+          type: string
+          example: 'APT-101'
+        fechaEntrada:
+          type: string
+          format: date
+          example: '2026-12-10'
+        fechaSalida:
+          type: string
+          format: date
+          example: '2026-12-17'
+        ocupantes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OcupanteCotizacionRequest'
+
+    CargoNocheResponse:
+      type: object
+      required:
+        - noche
+        - temporada
+        - tarifaOcupanteNoche
+        - ocupantesFacturables
+        - subtotalNoche
+      properties:
+        noche:
+          type: string
+          format: date
+          example: '2026-12-10'
+        temporada:
+          type: string
+          example: 'ALTA'
+        tarifaOcupanteNoche:
+          type: integer
+          format: int64
+          description: Valor unitario por persona facturable (en centavos/unidad monetaria entera)
+          example: 100000
+        ocupantesFacturables:
+          type: integer
+          example: 2
+        subtotalNoche:
+          type: integer
+          format: int64
+          example: 200000
+
+    CotizacionResponse:
+      type: object
+      required:
+        - subtotal
+        - porcentajeDescuento
+        - valorDescuento
+        - valorTotal
+        - totalNoches
+        - detalleNoches
+      properties:
+        subtotal:
+          type: integer
+          format: int64
+          example: 1400000
+        porcentajeDescuento:
+          type: integer
+          format: int64
+          description: Porcentaje de descuento aplicado (0 a 100)
+          example: 10
+        valorDescuento:
+          type: integer
+          format: int64
+          example: 140000
+        valorTotal:
+          type: integer
+          format: int64
+          description: Monto total final cotizado
+          example: 1260000
+        totalNoches:
+          type: integer
+          example: 7
+        detalleNoches:
+          type: array
+          items:
+            $ref: '#/components/schemas/CargoNocheResponse'
+
+    ApartamentoDisponibleResponse:
+      type: object
+      required:
+        - identificacion
+        - nombre
+        - dormitorios
+        - capacidadMaxima
+      properties:
+        identificacion:
+          type: string
+          example: 'APT-101'
+        nombre:
+          type: string
+          example: 'Suite Campestre 101'
+        dormitorios:
+          type: integer
+          example: 2
+        capacidadMaxima:
+          type: integer
+          example: 4
+
+    PaginaApartamentosDisponibles:
+      type: object
+      required:
+        - contenido
+        - pagina
+        - tamanio
+        - totalElementos
+        - totalPaginas
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApartamentoDisponibleResponse'
+        pagina:
+          type: integer
+          example: 0
+        tamanio:
+          type: integer
+          example: 10
+        totalElementos:
+          type: integer
+          format: int64
+          example: 1
+        totalPaginas:
+          type: integer
+          example: 1
+
+    OcupanteRequest:
+      type: object
+      required:
+        - tipoDocumento
+        - numeroDocumento
+        - nombreCompleto
+        - fechaNacimiento
+      properties:
+        tipoDocumento:
+          type: string
+          example: 'CC'
+        numeroDocumento:
+          type: string
+          example: '1094900123'
+        nombreCompleto:
+          type: string
+          example: 'Carlos Andrés Pérez'
+        fechaNacimiento:
+          type: string
+          format: date
+          example: '1992-08-15'
+
+    CrearReservaRequest:
+      type: object
+      required:
+        - identificacionApartamento
+        - fechaEntrada
+        - fechaSalida
+        - canalOrigen
+        - titular
+        - ocupantes
+        - autor
+      properties:
+        identificacionApartamento:
+          type: string
+          example: 'APT-101'
+        fechaEntrada:
+          type: string
+          format: date
+          example: '2026-12-10'
+        fechaSalida:
+          type: string
+          format: date
+          example: '2026-12-17'
+        canalOrigen:
+          $ref: '#/components/schemas/CanalOrigen'
+        identificadorExterno:
+          type: string
+          nullable: true
+          description: Requerido obligatoriamente si el canal es EXTERNO
+          example: 'BOOKING-EXP-992'
+        titular:
+          $ref: '#/components/schemas/OcupanteRequest'
+        ocupantes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OcupanteRequest'
+        horaEstimadaLlegada:
+          type: string
+          nullable: true
+          description: Hora esperada de llegada (HH:mm o HH:mm:ss)
+          example: '15:30:00'
+        autor:
+          type: string
+          description: Identificación del recepcionista o sistema que registra la acción
+          example: 'recepcion_central'
+
+    OcupanteResponse:
+      type: object
+      required:
+        - tipoDocumento
+        - numeroDocumento
+        - nombreCompleto
+        - fechaNacimiento
+      properties:
+        tipoDocumento:
+          type: string
+          example: 'CC'
+        numeroDocumento:
+          type: string
+          example: '1094900123'
+        nombreCompleto:
+          type: string
+          example: 'Carlos Andrés Pérez'
+        fechaNacimiento:
+          type: string
+          format: date
+          example: '1992-08-15'
+
+    ReservaResumenResponse:
+      type: object
+      required:
+        - codigo
+        - identificacionApartamento
+        - fechaEntrada
+        - fechaSalida
+        - estado
+        - titularNombre
+        - valorTotal
+      properties:
+        codigo:
+          type: string
+          example: 'RES-2026-00001'
+        identificacionApartamento:
+          type: string
+          example: 'APT-101'
+        fechaEntrada:
+          type: string
+          format: date
+          example: '2026-12-10'
+        fechaSalida:
+          type: string
+          format: date
+          example: '2026-12-17'
+        estado:
+          $ref: '#/components/schemas/EstadoReserva'
+        titularNombre:
+          type: string
+          example: 'Carlos Andrés Pérez'
+        valorTotal:
+          type: integer
+          format: int64
+          example: 1260000
+
+    PaginaReservas:
+      type: object
+      required:
+        - contenido
+        - pagina
+        - tamanio
+        - totalElementos
+        - totalPaginas
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservaResumenResponse'
+        pagina:
+          type: integer
+          example: 0
+        tamanio:
+          type: integer
+          example: 10
+        totalElementos:
+          type: integer
+          format: int64
+          example: 1
+        totalPaginas:
+          type: integer
+          example: 1
+
+    EventoHistorialResponse:
+      type: object
+      required:
+        - momento
+        - accion
+        - autor
+        - estadoNuevo
+        - observacion
+      properties:
+        momento:
+          type: string
+          format: date-time
+          example: '2026-10-01T10:15:30Z'
+        accion:
+          type: string
+          example: 'CREACION'
+        autor:
+          type: string
+          example: 'recepcion_central'
+        estadoAnterior:
+          type: string
+          nullable: true
+          example: null
+        estadoNuevo:
+          type: string
+          example: 'PENDIENTE'
+        observacion:
+          type: string
+          example: 'Reserva creada por el canal DIRECTO'
+
+    ReservaDetalleResponse:
+      type: object
+      required:
+        - codigo
+        - identificacionApartamento
+        - fechaEntrada
+        - fechaSalida
+        - canalOrigen
+        - estado
+        - titular
+        - ocupantes
+        - cotizacionCongelada
+        - versionPolitica
+        - historial
+      properties:
+        codigo:
+          type: string
+          example: 'RES-2026-00001'
+        identificacionApartamento:
+          type: string
+          example: 'APT-101'
+        fechaEntrada:
+          type: string
+          format: date
+          example: '2026-12-10'
+        fechaSalida:
+          type: string
+          format: date
+          example: '2026-12-17'
+        canalOrigen:
+          $ref: '#/components/schemas/CanalOrigen'
+        identificadorExterno:
+          type: string
+          nullable: true
+          example: null
+        estado:
+          $ref: '#/components/schemas/EstadoReserva'
+        horaEstimadaLlegada:
+          type: string
+          nullable: true
+          example: '15:30:00'
+        novedadLlegada:
+          type: string
+          nullable: true
+          example: null
+        titular:
+          $ref: '#/components/schemas/OcupanteResponse'
+        ocupantes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OcupanteResponse'
+        cotizacionCongelada:
+          $ref: '#/components/schemas/CotizacionResponse'
+        versionPolitica:
+          type: integer
+          example: 1
+        historial:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoHistorialResponse'
+
+    AccionOperativaRequest:
+      type: object
+      required:
+        - autor
+      properties:
+        autor:
+          type: string
+          description: Identificación del usuario o personal que ejecuta la acción
+          example: 'recepcionista_01'
+
+    CancelarReservaRequest:
+      type: object
+      required:
+        - motivo
+        - autor
+      properties:
+        motivo:
+          type: string
+          description: Justificación explícita de la cancelación
+          example: 'Fuerza mayor reportada por el huésped titular'
+        autor:
+          type: string
+          example: 'recepcionista_01'
+
+    CargoResponse:
+      type: object
+      required:
+        - tipo
+        - concepto
+        - valor
+        - momento
+        - autor
+      properties:
+        tipo:
+          type: string
+          enum:
+            - ALOJAMIENTO
+            - AJUSTE_ALOJAMIENTO
+            - REVERSO_ALOJAMIENTO
+            - PENALIDAD
+            - CONSUMO_EXTRA
+          example: 'ALOJAMIENTO'
+        concepto:
+          type: string
+          example: 'Alojamiento estancia regular'
+        valor:
+          type: integer
+          format: int64
+          example: 1260000
+        momento:
+          type: string
+          format: date-time
+          example: '2026-10-01T10:15:30Z'
+        autor:
+          type: string
+          example: 'recepcion_central'
+
+    PagoResponse:
+      type: object
+      required:
+        - identificacion
+        - valor
+        - medio
+        - momento
+        - concepto
+        - autor
+      properties:
+        identificacion:
+          type: string
+          format: uuid
+          example: 'c2e27be8-0e1b-4171-8eb6-0eb0ad2cb6d9'
+        valor:
+          type: integer
+          format: int64
+          description: Importe del pago (positivo para abono, negativo para devolución)
+          example: 400000
+        medio:
+          type: string
+          example: 'TRANSFERENCIA_BANCARIA'
+        momento:
+          type: string
+          format: date-time
+          example: '2026-10-01T12:00:00Z'
+        concepto:
+          type: string
+          example: 'Anticipo 30% confirmación reserva'
+        autor:
+          type: string
+          example: 'recepcionista_01'
+
+    FolioResponse:
+      type: object
+      required:
+        - codigoReserva
+        - saldo
+        - totalPagado
+        - cerrado
+        - cargos
+        - pagos
+      properties:
+        codigoReserva:
+          type: string
+          example: 'RES-2026-00001'
+        saldo:
+          type: integer
+          format: int64
+          description: Saldo derivado actual (positivo indica deuda del huésped, negativo saldo a favor)
+          example: 860000
+        totalPagado:
+          type: integer
+          format: int64
+          example: 400000
+        cerrado:
+          type: boolean
+          example: false
+        autorizacionCierre:
+          type: string
+          nullable: true
+          example: null
+        cargos:
+          type: array
+          items:
+            $ref: '#/components/schemas/CargoResponse'
+        pagos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PagoResponse'
+
+    RegistrarPagoRequest:
+      type: object
+      required:
+        - valor
+        - medio
+        - concepto
+        - autor
+      properties:
+        valor:
+          type: integer
+          format: int64
+          description: Valor a pagar en números enteros sin decimales
+          example: 400000
+        medio:
+          type: string
+          example: 'TARJETA_CREDITO'
+        concepto:
+          type: string
+          example: 'Anticipo para confirmación'
+        autor:
+          type: string
+          example: 'recepcionista_01'
+
+    RegistrarCargoRequest:
+      type: object
+      required:
+        - concepto
+        - valor
+        - autor
+      properties:
+        concepto:
+          type: string
+          example: 'Servicio a la habitación - Minibar'
+        valor:
+          type: integer
+          format: int64
+          description: Valor positivo del consumo
+          example: 50000
+        autor:
+          type: string
+          example: 'recepcionista_01'
+
+    CerrarFolioRequest:
+      type: object
+      properties:
+        autorizacion:
+          type: string
+          nullable: true
+          description: Obligatorio si el saldo es distinto de cero
+          example: 'ADMIN-AUT-8831'
+
+    ErrorRespuesta:
+      type: object
+      required:
+        - codigo
+        - mensaje
+        - marcaTiempo
+      properties:
+        codigo:
+          type: string
+          description: Código estandarizado del error
+          example: 'REGLA_NEGOCIO_VIOLADA'
+        mensaje:
+          type: string
+          description: Explicación amigable del fallo
+          example: 'Existe una reserva activa o un bloqueo vigente en las fechas seleccionadas.'
+        detalles:
+          type: array
+          items:
+            type: string
+          example:
+            - 'El apartamento APT-101 no admite más de 4 personas.'
+        marcaTiempo:
+          type: string
+          format: date-time
+          example: '2026-10-01T15:20:00Z'
+
+  responses:
+    BadRequest:
+      description: Error de sintaxis, formato o parámetros obligatorios faltantes
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorRespuesta'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorRespuesta'
+    Conflict:
+      description: Conflicto o regla de negocio del dominio violada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorRespuesta'
