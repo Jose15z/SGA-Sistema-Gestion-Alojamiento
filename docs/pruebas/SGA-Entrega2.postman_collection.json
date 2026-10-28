@@ -1,0 +1,5510 @@
+{
+  "info": {
+    "_postman_id": "96b9b39c-2bd5-59f5-9664-8e02c6a90cf5",
+    "name": "SGA Siete Raíces — Entrega 2",
+    "description": "Colección de la sustentación. Se ejecuta completa, en orden, contra la aplicación recién arrancada (./gradlew bootRun) sin preparar nada a mano: los datos de prueba los carga data.sql. Cubre el flujo completo de una reserva, un 409 por cada regla expuesta, y los 400, 401, 403 y 404.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Fechas relativas al día de ejecución: la colección funciona cualquier día",
+          "const base = new Date();",
+          "function dia(n) { const d = new Date(base.getTime()); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().substring(0, 10); }",
+          "[11, 13, 20, 21, 22, 30, 32, 33, 37, 40, 43, 44, 45, 47, 50, 52, 70, 72, 80, 82].forEach(n => pm.collectionVariables.set('d' + n, dia(n)));",
+          "pm.collectionVariables.set('dm3', dia(-3));",
+          "pm.collectionVariables.set('dm1', dia(-1));",
+          "if (!pm.collectionVariables.get('sufijo')) {",
+          "  const s = String(Date.now()).slice(-8);",
+          "  pm.collectionVariables.set('sufijo', s);",
+          "  pm.collectionVariables.set('correoNuevo', 'huesped' + s + '@correo.com');",
+          "  pm.collectionVariables.set('documentoNuevo', '9' + s);",
+          "  pm.collectionVariables.set('externo', 'BOOKING-' + s);",
+          "}",
+          "const total = Number(pm.collectionVariables.get('valorTotal') || 0);",
+          "pm.collectionVariables.set('anticipo', Math.ceil(total * 0.3));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api"
+    },
+    {
+      "key": "tokenFalso",
+      "value": "eyJhbGciOiJIUzI1NiJ9.e30.firma-invalida"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación (7.2)",
+      "item": [
+        {
+          "name": "Iniciar sesión admin@sieteraices.co",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@sieteraices.co\",\n  \"contrasena\": \"Admin123*\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Iniciar sesión admin@sieteraices.co → 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json(); pm.test('Emite JWT con expiración', () => { pm.expect(r.token).to.be.a('string'); pm.expect(r.expiraEn).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenAdmin', r.token);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión recepcion@sieteraices.co",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"recepcion@sieteraices.co\",\n  \"contrasena\": \"Recepcion123*\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Iniciar sesión recepcion@sieteraices.co → 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json(); pm.test('Emite JWT con expiración', () => { pm.expect(r.token).to.be.a('string'); pm.expect(r.expiraEn).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenRecepcion', r.token);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión ana.ramirez@correo.com",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"ana.ramirez@correo.com\",\n  \"contrasena\": \"Huesped123*\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Iniciar sesión ana.ramirez@correo.com → 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json(); pm.test('Emite JWT con expiración', () => { pm.expect(r.token).to.be.a('string'); pm.expect(r.expiraEn).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenAna', r.token);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión carlos.gomez@correo.com",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"carlos.gomez@correo.com\",\n  \"contrasena\": \"Huesped123*\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Iniciar sesión carlos.gomez@correo.com → 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json(); pm.test('Emite JWT con expiración', () => { pm.expect(r.token).to.be.a('string'); pm.expect(r.expiraEn).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenCarlos', r.token);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registro público de huésped",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoNuevo}}\",\n  \"contrasena\": \"Clave12345*\",\n  \"nombreCompleto\": \"Huésped Nuevo\",\n  \"documento\": \"{{documentoNuevo}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registro público de huésped → 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Rol HUESPED y sin contraseña', () => { const u = pm.response.json(); pm.expect(u.rol).to.eql('HUESPED'); pm.expect(u).to.not.have.property('contrasena'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nuevo huésped inicia sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoNuevo}}\",\n  \"contrasena\": \"Clave12345*\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Nuevo huésped inicia sesión → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · registro con correo ya registrado (unicidad 7.2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"ana.ramirez@correo.com\",\n  \"contrasena\": \"Clave12345*\",\n  \"nombreCompleto\": \"Otra Ana\",\n  \"documento\": \"55555\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · registro con correo ya registrado (unicidad 7.2) → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · registro con correo mal formado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "registro"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no-es-correo\",\n  \"contrasena\": \"corta\",\n  \"nombreCompleto\": \"\",\n  \"documento\": \"1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · registro con correo mal formado → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "401 · contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@sieteraices.co\",\n  \"contrasena\": \"incorrecta\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 · contraseña incorrecta → 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Seguridad: 401, 403 y propietario",
+      "item": [
+        {
+          "name": "401 · listar reservas sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 · listar reservas sin token → 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "401 · token inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenFalso}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 · token inválido → 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · huésped intenta registrar un apartamento (rol)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"APT-499\",\n  \"nombre\": \"X\",\n  \"dormitorios\": 1,\n  \"capacidad\": 2,\n  \"tarifas\": [\n    {\n      \"temporada\": \"BASE\",\n      \"valorPorOcupanteNoche\": 1\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · huésped intenta registrar un apartamento (rol) → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · recepcionista intenta registrar una temporada (rol)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/temporadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "temporadas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"X\",\n  \"tipo\": \"ALTA\",\n  \"fechaInicio\": \"2029-01-01\",\n  \"fechaFin\": \"2029-01-02\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · recepcionista intenta registrar una temporada (rol) → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · huésped intenta confirmar una reserva (rol)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001",
+                "confirmar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · huésped intenta confirmar una reserva (rol) → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "200 · Ana consulta su reserva (propietaria)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 · Ana consulta su reserva (propietaria) → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · Carlos consulta la reserva de Ana (propietario)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCarlos}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · Carlos consulta la reserva de Ana (propietario) → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · Carlos consulta el folio de Ana (propietario)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folios/RES-2025-00001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "RES-2025-00001"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCarlos}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · Carlos consulta el folio de Ana (propietario) → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · Carlos intenta cancelar la reserva de Ana (propietario)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001",
+                "cancelar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCarlos}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"No es mía\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · Carlos intenta cancelar la reserva de Ana (propietario) → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · Carlos intenta registrar un vehículo en la reserva de Ana",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001",
+                "vehiculos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCarlos}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ZZZ999\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · Carlos intenta registrar un vehículo en la reserva de Ana → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "200 · Ana lista reservas: solo ve las suyas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 · Ana lista reservas: solo ve las suyas → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todas son de Ana', () => { const p = pm.response.json(); pm.expect(p.contenido.length).to.be.above(0); p.contenido.forEach(r => pm.expect(r.titularNombre).to.eql('Ana Ramírez')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "200 · Carlos lista reservas: solo ve las suyas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenCarlos}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 · Carlos lista reservas: solo ve las suyas → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todas son de Carlos', () => { pm.response.json().contenido.forEach(r => pm.expect(r.titularNombre).to.eql('Carlos Gómez')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · huésped intenta reservar por el canal DIRECTO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d50}}\",\n  \"fechaSalida\": \"{{d52}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"1094123456\",\n    \"nombreCompleto\": \"Ana Ramírez\",\n    \"fechaNacimiento\": \"1990-05-12\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · huésped intenta reservar por el canal DIRECTO → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 · huésped intenta reservar a nombre de otra persona",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d50}}\",\n  \"fechaSalida\": \"{{d52}}\",\n  \"canalOrigen\": \"PORTAL\",\n  \"titular\": {\n    \"documento\": \"1094555666\",\n    \"nombreCompleto\": \"Carlos Gómez\",\n    \"fechaNacimiento\": \"1985-08-30\"\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 · huésped intenta reservar a nombre de otra persona → 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Alojamiento, apartamentos, temporadas y política (7.3, 7.4)",
+      "item": [
+        {
+          "name": "Listar apartamentos (10 por página)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listar apartamentos (10 por página) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginado', () => { const p = pm.response.json(); pm.expect(p.tamanio).to.eql(10); pm.expect(p.totalElementos).to.be.at.least(7); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar APT-301 con sus tarifas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-301",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-301"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consultar APT-301 con sus tarifas → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tres tarifas', () => pm.expect(pm.response.json().tarifas.length).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 · apartamento inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-999"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 · apartamento inexistente → 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · identificación con formato inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/301",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "301"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · identificación con formato inválido → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar apartamento APT-401 con tarifas completas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"APT-401\",\n  \"nombre\": \"Mirador\",\n  \"dormitorios\": 2,\n  \"capacidad\": 4,\n  \"tarifas\": [\n    {\n      \"temporada\": \"BASE\",\n      \"valorPorOcupanteNoche\": 90000\n    },\n    {\n      \"temporada\": \"ALTA\",\n      \"valorPorOcupanteNoche\": 100000\n    },\n    {\n      \"temporada\": \"ESPECIAL\",\n      \"valorPorOcupanteNoche\": 110000\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar apartamento APT-401 con tarifas completas → 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Location', () => pm.expect(pm.response.headers.get('Location')).to.include('/api/apartamentos/APT-401'));",
+                  "pm.test('Nace activo', () => pm.expect(pm.response.json().activo).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · L-04 identificación duplicada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"APT-401\",\n  \"nombre\": \"Otro\",\n  \"dormitorios\": 1,\n  \"capacidad\": 2,\n  \"tarifas\": [\n    {\n      \"temporada\": \"BASE\",\n      \"valorPorOcupanteNoche\": 90000\n    },\n    {\n      \"temporada\": \"ALTA\",\n      \"valorPorOcupanteNoche\": 100000\n    },\n    {\n      \"temporada\": \"ESPECIAL\",\n      \"valorPorOcupanteNoche\": 110000\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · L-04 identificación duplicada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · 7.4 apartamento sin tarifa en todas las temporadas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"APT-402\",\n  \"nombre\": \"Incompleto\",\n  \"dormitorios\": 1,\n  \"capacidad\": 2,\n  \"tarifas\": [\n    {\n      \"temporada\": \"BASE\",\n      \"valorPorOcupanteNoche\": 90000\n    },\n    {\n      \"temporada\": \"ALTA\",\n      \"valorPorOcupanteNoche\": 100000\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · 7.4 apartamento sin tarifa en todas las temporadas → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · apartamento con dormitorios en cero",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacion\": \"APT-403\",\n  \"nombre\": \"X\",\n  \"dormitorios\": 0,\n  \"capacidad\": 2,\n  \"tarifas\": [\n    {\n      \"temporada\": \"BASE\",\n      \"valorPorOcupanteNoche\": 90000\n    },\n    {\n      \"temporada\": \"ALTA\",\n      \"valorPorOcupanteNoche\": 100000\n    },\n    {\n      \"temporada\": \"ESPECIAL\",\n      \"valorPorOcupanteNoche\": 110000\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · apartamento con dormitorios en cero → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cambiar capacidad de APT-401",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-401/capacidad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-401",
+                "capacidad"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacidad\": 3\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cambiar capacidad de APT-401 → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Capacidad 3', () => pm.expect(pm.response.json().capacidad).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar tarifa ALTA de APT-401",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-401/tarifas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-401",
+                "tarifas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"temporada\": \"ALTA\",\n  \"valorPorOcupanteNoche\": 105000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Actualizar tarifa ALTA de APT-401 → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retirar APT-401 de la venta (eliminación lógica)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-401/retirar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-401",
+                "retirar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Retirar APT-401 de la venta (eliminación lógica) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Inactivo', () => pm.expect(pm.response.json().activo).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · retirar un apartamento ya retirado",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-401/retirar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-401",
+                "retirar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · retirar un apartamento ya retirado → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reactivar APT-401",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-401/reactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-401",
+                "reactivar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reactivar APT-401 → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · 7.3 retirar APT-302, que tiene reservas activas",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-302/retirar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-302",
+                "retirar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · 7.3 retirar APT-302, que tiene reservas activas → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-11/F-09 transición operativa inválida (PREPARADO → EN_PREPARACION)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-301/iniciar-preparacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-301",
+                "iniciar-preparacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-11/F-09 transición operativa inválida (PREPARADO → EN_PREPARACION) → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar temporadas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/temporadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "temporadas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listar temporadas → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar temporada especial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/temporadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "temporadas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Festival 2028\",\n  \"tipo\": \"ESPECIAL\",\n  \"fechaInicio\": \"2028-03-01\",\n  \"fechaFin\": \"2028-03-05\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar temporada especial → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · L-08 temporadas solapadas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/temporadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "temporadas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Solapada\",\n  \"tipo\": \"ALTA\",\n  \"fechaInicio\": \"2028-03-04\",\n  \"fechaFin\": \"2028-03-10\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · L-08 temporadas solapadas → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · 7.4 la temporada BASE no se registra por fechas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/temporadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "temporadas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Base\",\n  \"tipo\": \"BASE\",\n  \"fechaInicio\": \"2029-01-01\",\n  \"fechaFin\": \"2029-01-02\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · 7.4 la temporada BASE no se registra por fechas → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · temporada con fin anterior al inicio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/temporadas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "temporadas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Invertida\",\n  \"tipo\": \"ALTA\",\n  \"fechaInicio\": \"2029-02-10\",\n  \"fechaFin\": \"2029-02-01\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · temporada con fin anterior al inicio → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar política vigente (pública)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/politicas-cancelacion/vigente",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "politicas-cancelacion",
+                "vigente"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consultar política vigente (pública) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tramos 168/48/0', () => pm.expect(pm.response.json().tramos.length).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · L-10 política sin tramo desde cero horas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/politicas-cancelacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "politicas-cancelacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tramos\": [\n    {\n      \"antelacionMinimaHoras\": 72,\n      \"porcentaje\": 20\n    }\n  ],\n  \"porcentajeNoShow\": 50,\n  \"horaEntrada\": \"15:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · L-10 política sin tramo desde cero horas → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · política con porcentaje mayor a 100",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/politicas-cancelacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "politicas-cancelacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tramos\": [\n    {\n      \"antelacionMinimaHoras\": 0,\n      \"porcentaje\": 120\n    }\n  ],\n  \"porcentajeNoShow\": 50,\n  \"horaEntrada\": \"15:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · política con porcentaje mayor a 100 → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publicar política versión 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/politicas-cancelacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "politicas-cancelacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tramos\": [\n    {\n      \"antelacionMinimaHoras\": 240,\n      \"porcentaje\": 0\n    },\n    {\n      \"antelacionMinimaHoras\": 72,\n      \"porcentaje\": 25\n    },\n    {\n      \"antelacionMinimaHoras\": 0,\n      \"porcentaje\": 50\n    }\n  ],\n  \"porcentajeNoShow\": 60,\n  \"horaEntrada\": \"15:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicar política versión 2 → 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Versión 2', () => pm.expect(pm.response.json().version).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-22 · la reserva existente conserva la política versión 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RN-22 · la reserva existente conserva la política versión 1 → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Versión 1 congelada', () => pm.expect(pm.response.json().versionPolitica).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar bloqueo en APT-201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-201/bloqueos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-201",
+                "bloqueos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaEntrada\": \"{{d70}}\",\n  \"fechaSalida\": \"{{d72}}\",\n  \"motivo\": \"Pintura\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar bloqueo en APT-201 → 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('bloqueo', pm.response.json().identificacion);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · 7.3 bloqueo sobre noches con reserva activa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-301/bloqueos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-301",
+                "bloqueos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaEntrada\": \"{{d20}}\",\n  \"fechaSalida\": \"{{d22}}\",\n  \"motivo\": \"Revisión\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · 7.3 bloqueo sobre noches con reserva activa → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar bloqueos de APT-303",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-303/bloqueos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-303",
+                "bloqueos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listar bloqueos de APT-303 → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene el bloqueo de mantenimiento', () => pm.expect(pm.response.json().totalElementos).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Levantar bloqueo (eliminación lógica)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bloqueos/{{bloqueo}}/levantar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bloqueos",
+                "{{bloqueo}}",
+                "levantar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Obra terminada\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Levantar bloqueo (eliminación lógica) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Ya no vigente', () => pm.expect(pm.response.json().vigente).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · levantar un bloqueo ya levantado",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bloqueos/{{bloqueo}}/levantar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bloqueos",
+                "{{bloqueo}}",
+                "levantar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Otra vez\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · levantar un bloqueo ya levantado → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Disponibilidad y cotización (7.5)",
+      "item": [
+        {
+          "name": "Buscar disponibles por fechas y grupo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d30}}&fechaSalida={{d33}}&totalOcupantes=4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{d30}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d33}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "4"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Buscar disponibles por fechas y grupo → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Solo con capacidad suficiente', () => pm.response.json().contenido.forEach(a => pm.expect(a.capacidadMaxima).to.be.at.least(4)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RN-07 · APT-303 no aparece en noches bloqueadas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d11}}&fechaSalida={{d13}}&totalOcupantes=6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{d11}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d13}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "6"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RN-07 · APT-303 no aparece en noches bloqueadas → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Sin APT-303', () => pm.expect(pm.response.json().contenido.map(a => a.identificacion)).to.not.include('APT-303'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtro por dormitorios mínimos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d30}}&fechaSalida={{d33}}&totalOcupantes=2&dormitoriosMinimos=3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{d30}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d33}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "2"
+                },
+                {
+                  "key": "dormitoriosMinimos",
+                  "value": "3"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Filtro por dormitorios mínimos → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tres dormitorios', () => pm.response.json().contenido.forEach(a => pm.expect(a.dormitorios).to.be.at.least(3)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · búsqueda sin fecha de entrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaSalida={{d33}}&totalOcupantes=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d33}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "2"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · búsqueda sin fecha de entrada → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · tamaño de página mayor a 10",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d30}}&fechaSalida={{d33}}&totalOcupantes=2&size=11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{d30}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d33}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "2"
+                },
+                {
+                  "key": "size",
+                  "value": "11"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · tamaño de página mayor a 10 → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-03 salida anterior a la entrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d33}}&fechaSalida={{d30}}&totalOcupantes=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{d33}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d30}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "2"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-03 salida anterior a la entrada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cotizar 7 noches: RP-03 descuento del 10 % y RN-06 niño no facturable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cotizaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cotizaciones"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-301\",\n  \"fechaEntrada\": \"{{d30}}\",\n  \"fechaSalida\": \"{{d37}}\",\n  \"ocupantes\": [\n    {\n      \"fechaNacimiento\": \"1990-01-01\"\n    },\n    {\n      \"fechaNacimiento\": \"2021-01-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cotizar 7 noches: RP-03 descuento del 10 % y RN-06 niño no facturable → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Descuento 10 % y 1 facturable', () => { const c = pm.response.json(); pm.expect(Number(c.porcentajeDescuento)).to.eql(10); pm.expect(c.detalleNoches[0].ocupantesFacturables).to.eql(1); pm.expect(c.valorTotal).to.eql(c.subtotal - c.valorDescuento); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RP-01 una noche de Temporada Especial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cotizaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cotizaciones"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-301\",\n  \"fechaEntrada\": \"2027-03-22\",\n  \"fechaSalida\": \"2027-03-23\",\n  \"ocupantes\": [\n    {\n      \"fechaNacimiento\": \"1990-01-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RP-01 una noche de Temporada Especial → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-05/06 cotización sin ocupantes facturables",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cotizaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cotizaciones"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-301\",\n  \"fechaEntrada\": \"{{d30}}\",\n  \"fechaSalida\": \"{{d32}}\",\n  \"ocupantes\": [\n    {\n      \"fechaNacimiento\": \"2022-01-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-05/06 cotización sin ocupantes facturables → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 · cotizar un apartamento inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cotizaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cotizaciones"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-999\",\n  \"fechaEntrada\": \"{{d30}}\",\n  \"fechaSalida\": \"{{d32}}\",\n  \"ocupantes\": [\n    {\n      \"fechaNacimiento\": \"1990-01-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 · cotizar un apartamento inexistente → 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Flujo completo de una reserva y sus reglas (7.5)",
+      "item": [
+        {
+          "name": "Crear reserva DIRECTO (titular + niño, sin hora de llegada)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d43}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Crear reserva DIRECTO (titular + niño, sin hora de llegada) → 201', () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test('Nace PENDIENTE con Location', () => { pm.expect(r.estado).to.eql('PENDIENTE'); pm.expect(pm.response.headers.get('Location')).to.include(r.codigo); });",
+                  "pm.test('Valor y política congelados (RN-22)', () => { pm.expect(r.versionPolitica).to.eql(2); pm.expect(r.cotizacionCongelada.totalNoches).to.eql(3); });",
+                  "pm.collectionVariables.set('codigo', r.codigo);",
+                  "pm.collectionVariables.set('valorTotal', r.cotizacionCongelada.valorTotal);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar la reserva creada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consultar la reserva creada → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar el folio abierto con el cargo de alojamiento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consultar el folio abierto con el cargo de alojamiento → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Saldo = valor total', () => pm.expect(pm.response.json().saldo).to.eql(Number(pm.collectionVariables.get('valorTotal'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · L-11 confirmar sin anticipo del 30 %",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "confirmar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · L-11 confirmar sin anticipo del 30 % → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar anticipo del 30 %",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}/pagos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}",
+                "pagos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": \"{{anticipo}}\",\n  \"medio\": \"TRANSFERENCIA_BANCARIA\",\n  \"concepto\": \"Anticipo para confirmar\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar anticipo del 30 % → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-16 devolver más de lo pagado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}/pagos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}",
+                "pagos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": -99999999,\n  \"medio\": \"EFECTIVO\",\n  \"concepto\": \"Devolución excesiva\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-16 devolver más de lo pagado → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · pago con medio no admitido (L-18)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}/pagos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}",
+                "pagos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": 1000,\n  \"medio\": \"BITCOIN\",\n  \"concepto\": \"X\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · pago con medio no admitido (L-18) → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-09 confirmar sin hora estimada de llegada",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "confirmar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-09 confirmar sin hora estimada de llegada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Indicar hora estimada de llegada",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/hora-llegada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "hora-llegada"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"horaEstimadaLlegada\": \"16:00\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Indicar hora estimada de llegada → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar reserva",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "confirmar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Confirmar reserva → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CONFIRMADA', () => pm.expect(pm.response.json().estado).to.eql('CONFIRMADA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-08 confirmar una reserva ya confirmada",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "confirmar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-08 confirmar una reserva ya confirmada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar primer vehículo (parqueadero incluido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "vehiculos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"ABC123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar primer vehículo (parqueadero incluido) → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar segundo vehículo (RP-02: cargo por noche)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "vehiculos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"XYZ789\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar segundo vehículo (RP-02: cargo por noche) → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RP-02 tercer vehículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/vehiculos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "vehiculos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"JKL456\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RP-02 tercer vehículo → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RP-02 · el folio tiene el cargo del vehículo adicional",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RP-02 · el folio tiene el cargo del vehículo adicional → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cargo 20.000 x 3 noches', () => pm.expect(pm.response.json().cargos.some(c => c.tipo === 'SERVICIO_ADICIONAL' && c.valor === 60000)).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modificar fechas (RN-14: recalcula y registra el ajuste)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/estancia",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "estancia"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d44}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Modificar fechas (RN-14: recalcula y registra el ajuste) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('4 noches', () => pm.expect(pm.response.json().cotizacionCongelada.totalNoches).to.eql(4));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar cargo por servicio adicional (lavandería)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}/cargos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}",
+                "cargos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concepto\": \"Lavandería\",\n  \"valor\": 25000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar cargo por servicio adicional (lavandería) → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar reserva (RN-13: política congelada)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "cancelar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Cambio de planes del huésped\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cancelar reserva (RN-13: política congelada) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('CANCELADA', () => pm.expect(pm.response.json().estado).to.eql('CANCELADA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Folio liquidado: reverso del alojamiento y penalidad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folios/{{codigo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "{{codigo}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Folio liquidado: reverso del alojamiento y penalidad → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene reverso y penalidad', () => { const t = pm.response.json().cargos.map(c => c.tipo); pm.expect(t).to.include('REVERSO_ALOJAMIENTO'); pm.expect(t).to.include('PENALIDAD'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-08 cancelar una reserva cancelada",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigo}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigo}}",
+                "cancelar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Otra vez\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-08 cancelar una reserva cancelada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-02 el grupo supera la capacidad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-101\",\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d43}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    },\n    {\n      \"documento\": \"71000333\",\n      \"nombreCompleto\": \"Luis Restrepo\",\n      \"fechaNacimiento\": \"1982-01-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-02 el grupo supera la capacidad → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-01 noches solapadas con una reserva activa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-301\",\n  \"fechaEntrada\": \"{{d21}}\",\n  \"fechaSalida\": \"{{d22}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-01 noches solapadas con una reserva activa → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-04 fecha de entrada en el pasado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{dm3}}\",\n  \"fechaSalida\": \"{{dm1}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-04 fecha de entrada en el pasado → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-03 salida igual a la entrada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d40}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-03 salida igual a la entrada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-07 apartamento con bloqueo vigente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-303\",\n  \"fechaEntrada\": \"{{d11}}\",\n  \"fechaSalida\": \"{{d13}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-07 apartamento con bloqueo vigente → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-06/3.2 el titular debe ser facturable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d43}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"TI1100222\",\n    \"nombreCompleto\": \"Tomás Restrepo\",\n    \"fechaNacimiento\": \"2020-06-01\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"71000111\",\n      \"nombreCompleto\": \"Marta Restrepo\",\n      \"fechaNacimiento\": \"1980-04-10\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-06/3.2 el titular debe ser facturable → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · L-16 más de una mascota",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d80}}\",\n  \"fechaSalida\": \"{{d82}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ],\n  \"mascotas\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · L-16 más de una mascota → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · ocupante repetido en el grupo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d80}}\",\n  \"fechaSalida\": \"{{d82}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"71000111\",\n      \"nombreCompleto\": \"Marta Restrepo\",\n      \"fechaNacimiento\": \"1980-04-10\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · ocupante repetido en el grupo → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RP-01 una noche de Temporada Especial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"2027-03-22\",\n  \"fechaSalida\": \"2027-03-23\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RP-01 una noche de Temporada Especial → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · canal EXTERNO sin identificador externo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d80}}\",\n  \"fechaSalida\": \"{{d82}}\",\n  \"canalOrigen\": \"EXTERNO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · canal EXTERNO sin identificador externo → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear reserva EXTERNO con identificador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d80}}\",\n  \"fechaSalida\": \"{{d82}}\",\n  \"canalOrigen\": \"EXTERNO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [],\n  \"identificadorExterno\": \"{{externo}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Crear reserva EXTERNO con identificador → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-19 mismo canal e identificador externo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-202\",\n  \"fechaEntrada\": \"{{d80}}\",\n  \"fechaSalida\": \"{{d82}}\",\n  \"canalOrigen\": \"EXTERNO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [],\n  \"identificadorExterno\": \"{{externo}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-19 mismo canal e identificador externo → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 · apartamento inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-999\",\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d43}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 · apartamento inexistente → 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · reserva sin titular",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"{{d40}}\",\n  \"fechaSalida\": \"{{d43}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": null,\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · reserva sin titular → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · fecha con formato inválido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-102\",\n  \"fechaEntrada\": \"10/12/2026\",\n  \"fechaSalida\": \"{{d43}}\",\n  \"canalOrigen\": \"DIRECTO\",\n  \"titular\": {\n    \"documento\": \"71000111\",\n    \"nombreCompleto\": \"Marta Restrepo\",\n    \"fechaNacimiento\": \"1980-04-10\"\n  },\n  \"acompanantes\": [\n    {\n      \"documento\": \"TI1100222\",\n      \"nombreCompleto\": \"Tomás Restrepo\",\n      \"fechaNacimiento\": \"2020-06-01\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · fecha con formato inválido → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ana reserva por el portal a su nombre",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificacionApartamento\": \"APT-201\",\n  \"fechaEntrada\": \"{{d45}}\",\n  \"fechaSalida\": \"{{d47}}\",\n  \"canalOrigen\": \"PORTAL\",\n  \"titular\": {\n    \"documento\": \"1094123456\",\n    \"nombreCompleto\": \"Ana Ramírez\",\n    \"fechaNacimiento\": \"1990-05-12\"\n  },\n  \"acompanantes\": [],\n  \"horaEstimadaLlegada\": \"14:00\",\n  \"mascotas\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Ana reserva por el portal a su nombre → 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('codigoAna', pm.response.json().codigo);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ana cancela su propia reserva",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/{{codigoAna}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "{{codigoAna}}",
+                "cancelar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Viaje aplazado\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Ana cancela su propia reserva → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar reservas con filtro por estado, de la más reciente a la más antigua",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?estado=CANCELADA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "CANCELADA"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listar reservas con filtro por estado, de la más reciente a la más antigua → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Filtradas y ordenadas', () => { const c = pm.response.json().contenido; c.forEach(r => pm.expect(r.estado).to.eql('CANCELADA')); for (let i = 1; i < c.length; i++) pm.expect(c[i-1].fechaCreacion >= c[i].fechaCreacion).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar reservas por apartamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?apartamento=APT-301",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "apartamento",
+                  "value": "APT-301"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listar reservas por apartamento → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Solo APT-301', () => pm.response.json().contenido.forEach(r => pm.expect(r.identificacionApartamento).to.eql('APT-301')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 · reserva inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2026-99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2026-99999"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 · reserva inexistente → 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 · código de reserva con formato inválido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/XYZ",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "XYZ"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 · código de reserva con formato inválido → 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Operación diaria: llegada, salida y no-show (7.6)",
+      "item": [
+        {
+          "name": "Registrar llegada de RES-2025-00002 (reserva + apartamento)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00002/registrar-llegada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00002",
+                "registrar-llegada"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar llegada de RES-2025-00002 (reserva + apartamento) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('EN_CURSO', () => pm.expect(pm.response.json().estado).to.eql('EN_CURSO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El apartamento quedó OCUPADO",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-302",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-302"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El apartamento quedó OCUPADO → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('OCUPADO', () => pm.expect(pm.response.json().estadoOperativo).to.eql('OCUPADO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-08 registrar llegada dos veces",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00002/registrar-llegada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00002",
+                "registrar-llegada"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-08 registrar llegada dos veces → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-17/7.6 salida con el folio abierto",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00002/registrar-salida",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00002",
+                "registrar-salida"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-17/7.6 salida con el folio abierto → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar saldo del folio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/folios/RES-2025-00002",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "RES-2025-00002"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consultar saldo del folio → 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('saldo', pm.response.json().saldo);",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-17 cerrar el folio con saldo sin autorización",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/RES-2025-00002/cerrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "RES-2025-00002",
+                "cerrar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-17 cerrar el folio con saldo sin autorización → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar el saldo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/RES-2025-00002/pagos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "RES-2025-00002",
+                "pagos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valor\": \"{{saldo}}\",\n  \"medio\": \"TARJETA_DEBITO\",\n  \"concepto\": \"Pago del saldo\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pagar el saldo → 201', () => pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar el folio con saldo cero",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/RES-2025-00002/cerrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "RES-2025-00002",
+                "cerrar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cerrar el folio con saldo cero → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cerrado', () => pm.expect(pm.response.json().cerrado).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · un folio cerrado no admite movimientos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/folios/RES-2025-00002/cargos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "folios",
+                "RES-2025-00002",
+                "cargos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concepto\": \"Desayuno\",\n  \"valor\": 25000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · un folio cerrado no admite movimientos → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar salida (reserva FINALIZADA, apartamento PENDIENTE_PREPARACION)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00002/registrar-salida",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00002",
+                "registrar-salida"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registrar salida (reserva FINALIZADA, apartamento PENDIENTE_PREPARACION) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('FINALIZADA', () => pm.expect(pm.response.json().estado).to.eql('FINALIZADA'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar preparación de APT-302",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-302/iniciar-preparacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-302",
+                "iniciar-preparacion"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Iniciar preparación de APT-302 → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marcar APT-302 preparado",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/APT-302/marcar-preparado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "APT-302",
+                "marcar-preparado"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Marcar APT-302 preparado → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('PREPARADO', () => pm.expect(pm.response.json().estadoOperativo).to.eql('PREPARADO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ana informa una novedad de llegada",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00003/novedad-llegada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00003",
+                "novedad-llegada"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAna}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"novedad\": \"Vuelo retrasado, llego mañana temprano\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Ana informa una novedad de llegada → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · L-15 no-show con novedad pendiente",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00003/no-show",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00003",
+                "no-show"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · L-15 no-show con novedad pendiente → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recepción resuelve la novedad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00003/resolver-novedad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00003",
+                "resolver-novedad"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"El huésped no confirmó la nueva hora\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Recepción resuelve la novedad → 200', () => pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Declarar no-show (L-15, 20:00 del día de entrada; RN-13 retención 50 %)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00003/no-show",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00003",
+                "no-show"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Declarar no-show (L-15, 20:00 del día de entrada; RN-13 retención 50 %) → 200', () => pm.response.to.have.status(200));",
+                  "pm.test('NO_SHOW', () => pm.expect(pm.response.json().estado).to.eql('NO_SHOW'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-08 no-show de una reserva PENDIENTE",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001/no-show",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001",
+                "no-show"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-08 no-show de una reserva PENDIENTE → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 · RN-10 llegada de una reserva no confirmada",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas/RES-2025-00001/registrar-llegada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas",
+                "RES-2025-00001",
+                "registrar-llegada"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 · RN-10 llegada de una reserva no confirmada → 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error con formato único', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).to.have.property('mensaje'); pm.expect(e).to.not.have.property('trace'); });",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
