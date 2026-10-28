@@ -1,10 +1,11 @@
-package co.edu.uniquindio.sga.infrastructure.repository.memory;
+package co.edu.uniquindio.sga.infrastructure.persistence.inmemory;
 import co.edu.uniquindio.sga.domain.entity.*;
 import co.edu.uniquindio.sga.domain.repository.*;
 import co.edu.uniquindio.sga.domain.valueobject.*;
 import java.util.*;
 
 /** Archivo de versiones inmutables. Publicar una versión nunca reemplaza una anterior. */
+/** Adaptador en memoria para pruebas sin base de datos; no es un bean: la aplicación usa el adaptador JPA (Guía 10). */
 public final class PoliticaCancelacionRepositoryEnMemoria implements PoliticaCancelacionRepository {
     private final Map<VersionPolitica, PoliticaCancelacion> datos = new LinkedHashMap<>();
     private VersionPolitica vigente;

@@ -1,6 +1,8 @@
 package co.edu.uniquindio.sga.infrastructure;
-import co.edu.uniquindio.sga.infrastructure.repository.memory.*;
-import co.edu.uniquindio.sga.infrastructure.configuration.ParametrosAlojamiento;
+
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;import co.edu.uniquindio.sga.infrastructure.persistence.inmemory.*;
+import co.edu.uniquindio.sga.ParametrosDePrueba;
+import co.edu.uniquindio.sga.infrastructure.config.ParametrosAlojamiento;
 import co.edu.uniquindio.sga.domain.valueobject.FechaCreacion;
 import org.junit.jupiter.api.Test;
 import java.time.*;
@@ -19,10 +21,10 @@ class AdaptadoresMemoriaTest {
         assertEquals("RES-2027-00001",generador.generar(new FechaCreacion(LocalDateTime.of(2027,1,1,0,0))).valor());
     }
     @Test void configuracionNoShowYTemporadasCorrespondenALaFicha() {
-        var config=ParametrosAlojamiento.sieteRaices();
+        var config=ParametrosDePrueba.sieteRaices();
         assertEquals(LocalTime.of(20,0),config.horaLimiteNoShow());
-        assertEquals(2,config.nochesMinimasEnTemporada(" TEMPORADA ESPECIAL "));
-        assertEquals(1,config.nochesMinimasEnTemporada("Base"));
+        assertEquals(2,config.nochesMinimasEnTemporada(co.edu.uniquindio.sga.domain.valueobject.TipoTemporada.ESPECIAL));
+        assertEquals(1,config.nochesMinimasEnTemporada(TipoTemporada.BASE));
         assertThrows(UnsupportedOperationException.class,()->config.minimosPorTemporada().clear());
     }
 }

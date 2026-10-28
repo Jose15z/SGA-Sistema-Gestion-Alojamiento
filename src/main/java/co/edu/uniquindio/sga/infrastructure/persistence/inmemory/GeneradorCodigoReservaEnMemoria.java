@@ -1,10 +1,11 @@
-package co.edu.uniquindio.sga.infrastructure.repository.memory;
+package co.edu.uniquindio.sga.infrastructure.persistence.inmemory;
 import co.edu.uniquindio.sga.domain.entity.*;
 import co.edu.uniquindio.sga.domain.repository.*;
 import co.edu.uniquindio.sga.domain.valueobject.*;
 import java.util.*;
 
 /** Secuencia anual para ejercicios. Una sola instancia por almacén; no persiste entre ejecuciones. */
+/** Adaptador en memoria para pruebas sin base de datos; no es un bean: la aplicación usa el adaptador JPA (Guía 10). */
 public final class GeneradorCodigoReservaEnMemoria implements GeneradorCodigoReserva {
     private final Map<Integer, Integer> secuencias = new HashMap<>();
     @Override public synchronized CodigoReserva generar(FechaCreacion creacion) {
