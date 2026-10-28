@@ -36,4 +36,9 @@ public record VersionPolitica(int numero) {
             );
         }
     }
+
+    /** Versión que sucede a esta al publicar una nueva política. */
+    public VersionPolitica siguiente() {
+        return new VersionPolitica(numero + 1);
+    }
 }

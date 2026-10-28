@@ -1,6 +1,9 @@
 package co.edu.uniquindio.sga.domain.repository;
 
+import co.edu.uniquindio.sga.domain.valueobject.CapacidadParqueadero;
+import co.edu.uniquindio.sga.domain.valueobject.Dinero;
 import co.edu.uniquindio.sga.domain.valueobject.PlazoConfirmacion;
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.valueobject.TiempoPreparacion;
 import co.edu.uniquindio.sga.domain.valueobject.UmbralEdadFacturable;
 
@@ -89,5 +92,20 @@ public interface ConfiguracionAlojamiento {
     java.time.LocalTime horaLimiteNoShow();
 
     /** Mínimo de noches para la temporada identificada por el tarifario. */
-    int nochesMinimasEnTemporada(String temporada);
+    int nochesMinimasEnTemporada(TipoTemporada temporada);
+
+    /** L-16: mascotas admitidas por reserva (Siete Raíces: 1). */
+    int mascotasMaximasPorReserva();
+
+    /** RP-02: vehículos admitidos por reserva (Siete Raíces: 2). */
+    int vehiculosMaximosPorReserva();
+
+    /** RP-02: vehículos con parqueadero incluido en cada reserva (Siete Raíces: 1). */
+    int vehiculosIncluidosPorReserva();
+
+    /** RP-02: cupos totales del parqueadero. */
+    CapacidadParqueadero capacidadParqueadero();
+
+    /** RP-02: cargo por noche de cada vehículo adicional (Siete Raíces: $20.000). */
+    Dinero tarifaVehiculoAdicionalPorNoche();
 }

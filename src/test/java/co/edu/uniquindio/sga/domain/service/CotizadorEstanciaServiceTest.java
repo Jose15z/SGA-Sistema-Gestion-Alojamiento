@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.domain.service;
 
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.entity.Ocupante;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.repository.ConfiguracionAlojamiento;
@@ -74,12 +75,12 @@ class CotizadorEstanciaServiceTest {
 
         when(tarifario.tarifaDe(APARTAMENTO, ENTRADA))
                 .thenReturn(new Tarifa(
-                        APARTAMENTO, "Normal", Dinero.de(100_000)
+                        APARTAMENTO, TipoTemporada.BASE, Dinero.de(100_000)
                 ));
 
         when(tarifario.tarifaDe(APARTAMENTO, ENTRADA.plusDays(1)))
                 .thenReturn(new Tarifa(
-                        APARTAMENTO, "Especial", Dinero.de(150_000)
+                        APARTAMENTO, TipoTemporada.ESPECIAL, Dinero.de(150_000)
                 ));
 
         ValorCongelado resultado = servicio.cotizar(
@@ -89,8 +90,8 @@ class CotizadorEstanciaServiceTest {
         );
 
         assertEquals(Dinero.de(500_000), resultado.total());
-        assertEquals("Normal", resultado.detalle().get(0).temporada());
-        assertEquals("Especial", resultado.detalle().get(1).temporada());
+        assertEquals(TipoTemporada.BASE, resultado.detalle().get(0).temporada());
+        assertEquals(TipoTemporada.ESPECIAL, resultado.detalle().get(1).temporada());
         assertTrue(resultado.correspondeA(estancia));
 
         verify(tarifario).tarifaDe(APARTAMENTO, ENTRADA);
@@ -226,7 +227,7 @@ class CotizadorEstanciaServiceTest {
 
         when(tarifario.tarifaDe(APARTAMENTO, ENTRADA))
                 .thenReturn(new Tarifa(
-                        APARTAMENTO, "Normal", Dinero.de(100_000)
+                        APARTAMENTO, TipoTemporada.BASE, Dinero.de(100_000)
                 ));
 
         when(tarifario.tarifaDe(APARTAMENTO, ENTRADA.plusDays(1)))
@@ -246,7 +247,7 @@ class CotizadorEstanciaServiceTest {
         when(tarifario.tarifaDe(APARTAMENTO, ENTRADA))
                 .thenReturn(new Tarifa(
                         new IdentificacionApartamento("APT-302"),
-                        "Normal",
+                        TipoTemporada.BASE,
                         Dinero.de(100_000)
                 ));
 
@@ -357,7 +358,7 @@ class CotizadorEstanciaServiceTest {
             when(tarifario.tarifaDe(APARTAMENTO, noche))
                     .thenReturn(new Tarifa(
                             APARTAMENTO,
-                            "Normal",
+                            TipoTemporada.BASE,
                             Dinero.de(importe)
                     ));
         }

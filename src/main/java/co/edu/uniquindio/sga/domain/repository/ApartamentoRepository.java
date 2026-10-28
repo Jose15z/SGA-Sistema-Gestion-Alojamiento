@@ -3,6 +3,7 @@ package co.edu.uniquindio.sga.domain.repository;
 import co.edu.uniquindio.sga.domain.entity.Apartamento;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -46,4 +47,12 @@ public interface ApartamentoRepository {
      * @param apartamento apartamento que se desea guardar
      */
     void guardar(Apartamento apartamento);
+
+    /** Listado paginado de todos los apartamentos, activos o retirados. */
+    Pagina<Apartamento> listar(PeticionPagina pagina);
+
+    /** Apartamentos activos cuya capacidad admite al grupo (prefiltro de la búsqueda de disponibilidad). */
+    List<Apartamento> buscarActivosConCapacidadPara(int totalOcupantes);
+
+    boolean existe(IdentificacionApartamento identificacion);
 }

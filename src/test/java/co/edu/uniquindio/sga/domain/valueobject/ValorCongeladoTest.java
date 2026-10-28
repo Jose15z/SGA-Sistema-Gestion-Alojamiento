@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.domain.valueobject;
 
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import org.junit.jupiter.api.Test;
 
@@ -49,12 +50,12 @@ class ValorCongeladoTest {
     @Test
     void debeSumarNochesConTarifasYTemporadasDistintas() {
         CargoNoche normal = new CargoNoche(
-                ENTRADA, "Normal", Dinero.de(100_000), 2
+                ENTRADA, TipoTemporada.BASE, Dinero.de(100_000), 2
         );
 
         CargoNoche especial = new CargoNoche(
                 ENTRADA.plusDays(1),
-                "Especial",
+                TipoTemporada.ESPECIAL,
                 Dinero.de(150_000),
                 2
         );
@@ -305,7 +306,7 @@ class ValorCongeladoTest {
 
     private CargoNoche cargo(LocalDate noche, long tarifa) {
         return new CargoNoche(
-                noche, "Normal", Dinero.de(tarifa), 1
+                noche, TipoTemporada.BASE, Dinero.de(tarifa), 1
         );
     }
 }

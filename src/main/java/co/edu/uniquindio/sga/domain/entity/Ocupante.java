@@ -68,6 +68,11 @@ public class Ocupante {
         this.fechaNacimiento = fechaNacimiento;
     }
 
+    /** Reconstruye un ocupante guardado (Guía 10). */
+    public static Ocupante reconstruir(DocumentoIdentidad documento, String nombre, LocalDate fechaNacimiento) {
+        return new Ocupante(documento, nombre, fechaNacimiento, fechaNacimiento);
+    }
+
     /**
      * Calcula la edad del ocupante en una fecha determinada.
      */

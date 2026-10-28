@@ -1,7 +1,10 @@
 package co.edu.uniquindio.sga.domain.repository;
 
 import co.edu.uniquindio.sga.domain.entity.Reserva;
+import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
 import co.edu.uniquindio.sga.domain.valueobject.CodigoReserva;
+import co.edu.uniquindio.sga.domain.valueobject.Estancia;
+import co.edu.uniquindio.sga.domain.valueobject.IdentificadorExterno;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
 
@@ -76,4 +79,15 @@ public interface ReservaRepository {
     List<Reserva> buscarActivasPorApartamento(
             IdentificacionApartamento apartamento
     );
+
+    /**
+     * Listado filtrado y paginado, de la reserva más reciente a la más antigua.
+     */
+    Pagina<Reserva> buscar(FiltroReservas filtro, PeticionPagina pagina);
+
+    /** RN-19: indica si ya existe una reserva con ese canal e identificador externo. */
+    boolean existePorCanalEIdentificadorExterno(CanalOrigen canal, IdentificadorExterno identificador);
+
+    /** RP-02: reservas activas de cualquier apartamento que comparten noches con el periodo. */
+    List<Reserva> buscarActivasEnPeriodo(Estancia periodo);
 }

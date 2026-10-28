@@ -2,8 +2,18 @@ package co.edu.uniquindio.sga.domain.entity;
 
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.valueobject.Capacidad;
+import co.edu.uniquindio.sga.domain.valueobject.Dinero;
+import co.edu.uniquindio.sga.domain.valueobject.Tarifa;
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoOperativo;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Raíz del agregado Apartamento.
@@ -18,6 +28,9 @@ import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
  *     <li>La capacidad es un objeto de valor válido.</li>
  *     <li>Los cambios operativos respetan las transiciones permitidas.</li>
  *     <li>Solo un apartamento activo y PREPARADO puede ocuparse.</li>
+ *     <li>7.4: tiene tarifa en todas las temporadas; no puede quedar activo
+ *         (ni registrarse ni reactivarse) con tarifas incompletas.</li>
+ *     <li>Cada tarifa corresponde a este apartamento y hay una sola por temporada.</li>
  *     <li>La igualdad depende únicamente de la identificación.</li>
  * </ul>
  *
@@ -40,15 +53,42 @@ public class Apartamento {
     private Capacidad capacidad;
     private EstadoOperativo estadoOperativo;
     private boolean activo;
+    private final Map<TipoTemporada, Tarifa> tarifas = new EnumMap<>(TipoTemporada.class);
 
     /**
-     * Construye un apartamento conservando el estado inicial
-     * del modelo existente: activo y PREPARADO.
+     * Registra un apartamento activo y PREPARADO.
      *
-     * <p>Las comprobaciones que requieren tarifas u otros agregados
-     * corresponden a los servicios de dominio pertinentes.</p>
+     * <p>7.4: exige tarifa en todas las temporadas, por lo que nunca
+     * nace un apartamento vendible con tarifas incompletas.</p>
      */
     public Apartamento(
+            IdentificacionApartamento identificacion,
+            String nombre,
+            int dormitorios,
+            Capacidad capacidad,
+            Collection<Tarifa> tarifas
+    ) {
+        this(identificacion, nombre, dormitorios, capacidad);
+        if (tarifas == null || tarifas.stream().anyMatch(Objects::isNull)) {
+            throw new ReglaDominioException("Las tarifas del apartamento son obligatorias");
+        }
+        for (Tarifa tarifa : tarifas) {
+            if (!identificacion.equals(tarifa.apartamento())) {
+                throw new ReglaDominioException("Todas las tarifas deben corresponder al apartamento");
+            }
+            if (this.tarifas.put(tarifa.temporada(), tarifa) != null) {
+                throw new ReglaDominioException(
+                        "El apartamento no puede tener dos tarifas para la temporada " + tarifa.temporada());
+            }
+        }
+        if (!tieneTarifasCompletas()) {
+            throw new ReglaDominioException(
+                    "Un apartamento activo debe tener tarifa en todas las temporadas");
+        }
+        this.activo = true;
+    }
+
+    private Apartamento(
             IdentificacionApartamento identificacion,
             String nombre,
             int dormitorios,
@@ -83,7 +123,55 @@ public class Apartamento {
         this.dormitorios = dormitorios;
         this.capacidad = capacidad;
         this.estadoOperativo = EstadoOperativo.PREPARADO;
-        this.activo = true;
+        this.activo = false;
+    }
+
+    /**
+     * Reconstruye un apartamento guardado sin repetir las validaciones
+     * de registro (Guía 10). Solo la usan los adaptadores de persistencia.
+     */
+    public static Apartamento reconstruir(
+            IdentificacionApartamento identificacion,
+            String nombre,
+            int dormitorios,
+            Capacidad capacidad,
+            EstadoOperativo estadoOperativo,
+            boolean activo,
+            Collection<Tarifa> tarifas
+    ) {
+        Apartamento apartamento = new Apartamento(identificacion, nombre, dormitorios, capacidad);
+        tarifas.forEach(tarifa -> apartamento.tarifas.put(tarifa.temporada(), tarifa));
+        apartamento.estadoOperativo = Objects.requireNonNull(estadoOperativo);
+        apartamento.activo = activo;
+        return apartamento;
+    }
+
+    /** 7.4: hay tarifa para cada temporada del alojamiento. */
+    public boolean tieneTarifasCompletas() {
+        return Arrays.stream(TipoTemporada.values()).allMatch(tarifas::containsKey);
+    }
+
+    /**
+     * Reemplaza la tarifa de una temporada por un nuevo valor.
+     * No altera el valor congelado de las reservas existentes (RN-22, 3.5).
+     */
+    public void actualizarTarifa(TipoTemporada temporada, Dinero valorPorOcupanteNoche) {
+        Tarifa nueva = new Tarifa(identificacion, temporada, valorPorOcupanteNoche);
+        tarifas.put(temporada, nueva);
+    }
+
+    /** Tarifa vigente del apartamento para una temporada (RN-05). */
+    public Tarifa tarifaPara(TipoTemporada temporada) {
+        Tarifa tarifa = tarifas.get(temporada);
+        if (tarifa == null) {
+            throw new ReglaDominioException(
+                    "El apartamento " + identificacion.valor() + " no tiene tarifa para la temporada " + temporada);
+        }
+        return tarifa;
+    }
+
+    public List<Tarifa> getTarifas() {
+        return List.copyOf(tarifas.values());
     }
 
     /**
@@ -215,7 +303,26 @@ public class Apartamento {
      * <p>No elimina su identidad ni cambia su estado operativo.</p>
      */
     public void desactivar() {
+        if (!activo) {
+            throw new ReglaDominioException("El apartamento ya está retirado de la venta");
+        }
         this.activo = false;
+    }
+
+    /**
+     * Devuelve el apartamento a la venta.
+     *
+     * <p>7.4: no se reactiva un apartamento sin tarifas completas.</p>
+     */
+    public void reactivar() {
+        if (activo) {
+            throw new ReglaDominioException("El apartamento ya está activo para la venta");
+        }
+        if (!tieneTarifasCompletas()) {
+            throw new ReglaDominioException(
+                    "No se puede activar un apartamento sin tarifas en todas las temporadas");
+        }
+        this.activo = true;
     }
 
     /**

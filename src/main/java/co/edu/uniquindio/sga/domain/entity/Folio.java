@@ -27,6 +27,21 @@ public final class Folio {
         cargos.add(alojamiento);
     }
 
+    /** Reconstruye un folio guardado sin repetir validaciones de registro (Guía 10). */
+    public static Folio reconstruir(CodigoReserva reserva, List<Cargo> cargos, List<Pago> pagos,
+                                    boolean cerrado, boolean alojamientoLiquidado, String autorizacionCierre) {
+        if (cargos == null || cargos.isEmpty()) {
+            throw new ReglaDominioException("Un folio guardado debe conservar su cargo de alojamiento");
+        }
+        Folio folio = new Folio(reserva, cargos.get(0));
+        folio.cargos.addAll(cargos.subList(1, cargos.size()));
+        folio.pagos.addAll(pagos);
+        folio.cerrado = cerrado;
+        folio.alojamientoLiquidado = alojamientoLiquidado;
+        folio.autorizacionCierre = autorizacionCierre;
+        return folio;
+    }
+
     public void registrarCargo(Cargo cargo) {
         if (cargo == null) throw new ReglaDominioException("El cargo es obligatorio");
         verificarMovimiento(cargo.momento());
@@ -97,6 +112,7 @@ public final class Folio {
     public List<Cargo> obtenerCargos() { return List.copyOf(cargos); }
     public List<Pago> obtenerPagos() { return List.copyOf(pagos); }
     public boolean estaCerrado() { return cerrado; }
+    public boolean alojamientoLiquidado() { return alojamientoLiquidado; }
     public String getAutorizacionCierre() { return autorizacionCierre; }
     @Override public boolean equals(Object objeto) {
         return objeto instanceof Folio otro && reserva.equals(otro.reserva);

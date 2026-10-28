@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.domain.valueobject;
 
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import org.junit.jupiter.api.Test;
 
@@ -26,11 +27,11 @@ class CargoNocheTest {
     @Test
     void cargosConLosMismosValoresDebenSerIguales() {
         CargoNoche primero = new CargoNoche(
-                NOCHE, "Especial", Dinero.de(100_000), 3
+                NOCHE, TipoTemporada.ESPECIAL, Dinero.de(100_000), 3
         );
 
         CargoNoche segundo = new CargoNoche(
-                NOCHE, "Especial", Dinero.de(100_000), 3
+                NOCHE, TipoTemporada.ESPECIAL, Dinero.de(100_000), 3
         );
 
         assertEquals(primero, segundo);
@@ -40,33 +41,21 @@ class CargoNocheTest {
     @Test
     void cargosDeNochesDistintasNoDebenSerIguales() {
         CargoNoche primero = new CargoNoche(
-                NOCHE, "Especial", Dinero.de(100_000), 3
+                NOCHE, TipoTemporada.ESPECIAL, Dinero.de(100_000), 3
         );
 
         CargoNoche segundo = new CargoNoche(
-                NOCHE.plusDays(1), "Especial", Dinero.de(100_000), 3
+                NOCHE.plusDays(1), TipoTemporada.ESPECIAL, Dinero.de(100_000), 3
         );
 
         assertNotEquals(primero, segundo);
     }
 
-    @Test
-    void debeNormalizarLosEspaciosDeLaTemporada() {
-        CargoNoche conEspacios = new CargoNoche(
-                NOCHE, "  Especial  ", Dinero.de(100_000), 3
-        );
-
-        CargoNoche sinEspacios = new CargoNoche(
-                NOCHE, "Especial", Dinero.de(100_000), 3
-        );
-
-        assertEquals(sinEspacios, conEspacios);
-    }
 
     @Test
     void debeMultiplicarLaTarifaPorLosOcupantesFacturables() {
         CargoNoche cargo = new CargoNoche(
-                NOCHE, "Especial", Dinero.de(100_000), 3
+                NOCHE, TipoTemporada.ESPECIAL, Dinero.de(100_000), 3
         );
 
         Dinero subtotal = cargo.subtotal();
@@ -78,7 +67,7 @@ class CargoNocheTest {
     @Test
     void debePermitirCeroOcupantesFacturablesEnLaLinea() {
         CargoNoche cargo = new CargoNoche(
-                NOCHE, "Especial", Dinero.de(100_000), 0
+                NOCHE, TipoTemporada.ESPECIAL, Dinero.de(100_000), 0
         );
 
         Dinero subtotal = cargo.subtotal();
@@ -89,7 +78,7 @@ class CargoNocheTest {
     @Test
     void debePermitirUnaTarifaDeCero() {
         CargoNoche cargo = new CargoNoche(
-                NOCHE, "Especial", Dinero.CERO, 3
+                NOCHE, TipoTemporada.ESPECIAL, Dinero.CERO, 3
         );
 
         Dinero subtotal = cargo.subtotal();
@@ -102,7 +91,7 @@ class CargoNocheTest {
         assertThrows(
                 ReglaDominioException.class,
                 () -> new CargoNoche(
-                        null, "Especial", Dinero.de(100_000), 3
+                        null, TipoTemporada.ESPECIAL, Dinero.de(100_000), 3
                 )
         );
     }
@@ -117,32 +106,14 @@ class CargoNocheTest {
         );
     }
 
-    @Test
-    void debeRechazarUnaTemporadaVacia() {
-        assertThrows(
-                ReglaDominioException.class,
-                () -> new CargoNoche(
-                        NOCHE, "", Dinero.de(100_000), 3
-                )
-        );
-    }
 
-    @Test
-    void debeRechazarUnaTemporadaCompuestaSoloPorEspacios() {
-        assertThrows(
-                ReglaDominioException.class,
-                () -> new CargoNoche(
-                        NOCHE, "   ", Dinero.de(100_000), 3
-                )
-        );
-    }
 
     @Test
     void debeRechazarUnaTarifaNula() {
         assertThrows(
                 ReglaDominioException.class,
                 () -> new CargoNoche(
-                        NOCHE, "Especial", null, 3
+                        NOCHE, TipoTemporada.ESPECIAL, null, 3
                 )
         );
     }
@@ -152,7 +123,7 @@ class CargoNocheTest {
         assertThrows(
                 ReglaDominioException.class,
                 () -> new CargoNoche(
-                        NOCHE, "Especial", Dinero.de(-1), 3
+                        NOCHE, TipoTemporada.ESPECIAL, Dinero.de(-1), 3
                 )
         );
     }
@@ -162,7 +133,7 @@ class CargoNocheTest {
         assertThrows(
                 ReglaDominioException.class,
                 () -> new CargoNoche(
-                        NOCHE, "Especial", Dinero.de(100_000), -1
+                        NOCHE, TipoTemporada.ESPECIAL, Dinero.de(100_000), -1
                 )
         );
     }

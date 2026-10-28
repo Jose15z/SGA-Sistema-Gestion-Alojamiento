@@ -47,6 +47,14 @@ public final class PoliticaCancelacion {
     }
     public VersionPolitica getVersion() { return version; }
     public List<TramoCancelacion> getTramos() { return tramos; }
+    public BigDecimal getPorcentajeNoShow() { return porcentajeNoShow; }
+    public LocalTime getHoraEntrada() { return horaEntrada; }
+
+    /** Publica la siguiente versión conservando esta como histórica (RN-13, RN-22). */
+    public PoliticaCancelacion siguienteVersion(List<TramoCancelacion> tramos, BigDecimal porcentajeNoShow,
+                                                LocalTime horaEntrada) {
+        return new PoliticaCancelacion(version.siguiente(), tramos, porcentajeNoShow, horaEntrada);
+    }
     @Override public boolean equals(Object objeto) {
         return objeto instanceof PoliticaCancelacion otra && version.equals(otra.version);
     }

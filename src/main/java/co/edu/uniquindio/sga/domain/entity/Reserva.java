@@ -7,11 +7,14 @@ import co.edu.uniquindio.sga.domain.valueobject.Dinero;
 import co.edu.uniquindio.sga.domain.valueobject.Estancia;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.EventoReserva;
+import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
 import co.edu.uniquindio.sga.domain.valueobject.FechaCreacion;
+import co.edu.uniquindio.sga.domain.valueobject.IdentificadorExterno;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
 import co.edu.uniquindio.sga.domain.valueobject.PlazoConfirmacion;
 import co.edu.uniquindio.sga.domain.valueobject.UmbralEdadFacturable;
 import co.edu.uniquindio.sga.domain.valueobject.ValorCongelado;
+import co.edu.uniquindio.sga.domain.valueobject.Vehiculo;
 import co.edu.uniquindio.sga.domain.valueobject.VersionPolitica;
 
 import java.time.LocalDateTime;
@@ -22,6 +25,22 @@ import java.util.Objects;
 
 /**
  * Raíz del agregado Reserva.
+ *
+ * <p>Invariantes que protege el agregado por sí solo:</p>
+ * <ul>
+ *     <li>Nace PENDIENTE, con código, estancia, titular facturable incluido en el grupo,
+ *         valor y política congelados (RN-04, RN-06, RN-22).</li>
+ *     <li>Solo transita por los estados permitidos con métodos de negocio (RN-08):
+ *         confirmar exige hora estimada de llegada (RN-09), la llegada no ocurre antes
+ *         de la entrada (RN-10) y el no-show solo desde la hora límite configurada
+ *         sin novedad pendiente (L-15).</li>
+ *     <li>El historial es cronológico e inmutable; ningún evento retrocede en el tiempo.</li>
+ *     <li>Admite como máximo las mascotas (L-16) y los vehículos (RP-02) configurados.</li>
+ * </ul>
+ *
+ * <p>Condiciones que requieren coordinación con otros agregados (servicios de dominio):
+ * disponibilidad y solapamiento (RN-01, RN-07, RN-20), capacidad (RN-02), anticipo (L-11),
+ * retención (RN-13), cupos de parqueadero (RP-02) y unicidad externa (RN-19).</p>
  *
  * <p>Referencia al apartamento mediante su identificación.
  * Conserva la cotización, la versión de política aplicable
@@ -40,7 +59,7 @@ public class Reserva {
     private final CodigoReserva codigo;
     private final IdentificacionApartamento apartamento;
     private final CanalOrigen canalOrigen;
-    private final String identificadorExterno;
+    private final IdentificadorExterno identificadorExterno;
     private final FechaCreacion fechaCreacion;
     private final Ocupante titular;
     private final VersionPolitica politica;
@@ -52,6 +71,8 @@ public class Reserva {
     private List<EventoReserva> historial;
     private LocalTime horaEstimadaLlegada;
     private String novedadLlegada;
+    private int mascotas;
+    private List<Vehiculo> vehiculos = List.of();
 
     private Reserva(
             CodigoReserva codigo,
@@ -60,7 +81,7 @@ public class Reserva {
             Ocupante titular,
             List<Ocupante> ocupantes,
             CanalOrigen canalOrigen,
-            String identificadorExterno,
+            IdentificadorExterno identificadorExterno,
             FechaCreacion fechaCreacion,
             ValorCongelado valor,
             VersionPolitica politica,
@@ -108,7 +129,7 @@ public class Reserva {
             Ocupante titular,
             List<Ocupante> ocupantes,
             CanalOrigen canalOrigen,
-            String identificadorExterno,
+            IdentificadorExterno identificadorExterno,
             UmbralEdadFacturable umbralEdadFacturable,
             ValorCongelado valor,
             VersionPolitica politica,
@@ -222,8 +243,7 @@ public class Reserva {
         }
 
         if (canalOrigen.exigeIdentificadorExterno()
-                && (identificadorExterno == null
-                || identificadorExterno.isBlank())) {
+                && identificadorExterno == null) {
             throw new ReglaDominioException(
                     "Una reserva externa debe indicar "
                             + "su identificador externo"
@@ -557,6 +577,109 @@ public class Reserva {
         return ajuste;
     }
 
+    /**
+     * Reconstruye una reserva ya guardada, sin repetir las validaciones
+     * de creación (Guía 10). Solo la usan los adaptadores de persistencia.
+     */
+    public static Reserva reconstruir(
+            CodigoReserva codigo,
+            IdentificacionApartamento apartamento,
+            Estancia estancia,
+            Ocupante titular,
+            List<Ocupante> ocupantes,
+            CanalOrigen canalOrigen,
+            IdentificadorExterno identificadorExterno,
+            FechaCreacion fechaCreacion,
+            ValorCongelado valor,
+            VersionPolitica politica,
+            EstadoReserva estado,
+            List<EventoReserva> historial,
+            LocalTime horaEstimadaLlegada,
+            String novedadLlegada,
+            int mascotas,
+            List<Vehiculo> vehiculos
+    ) {
+        if (historial == null || historial.isEmpty()) {
+            throw new ReglaDominioException("Una reserva guardada debe conservar su historial");
+        }
+        Reserva reserva = new Reserva(codigo, apartamento, estancia, titular, ocupantes,
+                canalOrigen, identificadorExterno, fechaCreacion, valor, politica, historial.get(0));
+        reserva.estado = estado;
+        reserva.historial = List.copyOf(historial);
+        reserva.horaEstimadaLlegada = horaEstimadaLlegada;
+        reserva.novedadLlegada = novedadLlegada;
+        reserva.mascotas = mascotas;
+        reserva.vehiculos = List.copyOf(vehiculos);
+        return reserva;
+    }
+
+    /**
+     * L-16: registra cuántas mascotas acompañan al grupo.
+     *
+     * @param cantidad cantidad de mascotas
+     * @param maximoPermitido máximo configurado por el alojamiento
+     */
+    public void indicarMascotas(int cantidad, int maximoPermitido, String autor, LocalDateTime ahora) {
+        if (estado.esTerminal()) {
+            throw new ReglaDominioException("No se pueden indicar mascotas en una reserva terminada");
+        }
+        if (cantidad < 0) {
+            throw new ReglaDominioException("La cantidad de mascotas no puede ser negativa");
+        }
+        if (cantidad > maximoPermitido) {
+            throw new ReglaDominioException(
+                    "La reserva admite como máximo " + maximoPermitido + " mascota(s)");
+        }
+        List<EventoReserva> eventos = historialConEvento("MASCOTAS", autor, estado,
+                "Mascotas: " + cantidad, ahora);
+        mascotas = cantidad;
+        historial = eventos;
+    }
+
+    /**
+     * RP-02: el siguiente vehículo que se registre generaría cargo
+     * porque supera los cupos incluidos en la reserva.
+     */
+    public boolean siguienteVehiculoEsAdicional(int vehiculosIncluidos) {
+        return vehiculos.size() >= vehiculosIncluidos;
+    }
+
+    /**
+     * RP-02: asocia un vehículo a una reserva activa, sin repetir placas
+     * ni superar el máximo configurado. La disponibilidad de cupos del
+     * parqueadero se coordina con {@code DisponibilidadParqueaderoService}.
+     */
+    public void registrarVehiculo(Vehiculo vehiculo, int maximoPorReserva, String autor, LocalDateTime ahora) {
+        if (!estado.esActiva()) {
+            throw new ReglaDominioException("Solo una reserva activa puede registrar vehículos");
+        }
+        if (vehiculo == null) {
+            throw new ReglaDominioException("El vehículo es obligatorio");
+        }
+        if (vehiculos.contains(vehiculo)) {
+            throw new ReglaDominioException("El vehículo " + vehiculo.placa() + " ya está registrado en la reserva");
+        }
+        if (vehiculos.size() >= maximoPorReserva) {
+            throw new ReglaDominioException(
+                    "La reserva admite como máximo " + maximoPorReserva + " vehículos");
+        }
+        List<EventoReserva> eventos = historialConEvento("VEHICULO", autor, estado,
+                "Vehículo registrado: " + vehiculo.placa(), ahora);
+        List<Vehiculo> nuevos = new ArrayList<>(vehiculos);
+        nuevos.add(vehiculo);
+        vehiculos = List.copyOf(nuevos);
+        historial = eventos;
+    }
+
+    /** Propietario: el titular de la reserva se identifica por su documento. */
+    public boolean perteneceA(DocumentoIdentidad documento) {
+        return documento != null && titular.getDocumento().equals(documento);
+    }
+
+    public int getMascotas() { return mascotas; }
+
+    public List<Vehiculo> getVehiculos() { return vehiculos; }
+
     public String getNovedadLlegada() { return novedadLlegada; }
 
     /**
@@ -623,7 +746,7 @@ public class Reserva {
         return canalOrigen;
     }
 
-    public String getIdentificadorExterno() {
+    public IdentificadorExterno getIdentificadorExterno() {
         return identificadorExterno;
     }
 
