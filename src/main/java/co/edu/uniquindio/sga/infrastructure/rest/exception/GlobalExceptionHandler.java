@@ -4,6 +4,9 @@ import co.edu.uniquindio.sga.application.dto.response.ErrorResponse;
 import co.edu.uniquindio.sga.application.exception.AccesoDenegadoException;
 import co.edu.uniquindio.sga.application.exception.CredencialesInvalidasException;
 import co.edu.uniquindio.sga.application.exception.RecursoNoEncontradoException;
+import co.edu.uniquindio.sga.application.exception.SolicitudUsuarioInvalidaException;
+import co.edu.uniquindio.sga.application.exception.UsuarioYaRegistradoException;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +34,7 @@ import java.util.List;
  *     <li>401: credenciales inválidas o falta de autenticación.</li>
  *     <li>403: el usuario no es el propietario o su rol no lo permite.</li>
  *     <li>404: recurso inexistente (excepciones de aplicación).</li>
- *     <li>409: regla del negocio violada (excepción del dominio).</li>
+ *     <li>409: regla del negocio violada (excepción del dominio) o correo/documento ya registrados.</li>
  * </ul>
  * Nunca envía trazas técnicas al cliente.
  */
@@ -43,6 +46,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ReglaDominioException.class)
     public ResponseEntity<ErrorResponse> reglaDeNegocio(ReglaDominioException excepcion) {
         return respuesta(HttpStatus.CONFLICT, "REGLA_NEGOCIO_VIOLADA", excepcion.getMessage(), List.of());
+    }
+
+    @ExceptionHandler({UsuarioYaRegistradoException.class, Usuario.UsuarioInactivoException.class})
+    public ResponseEntity<ErrorResponse> conflictoUsuario(RuntimeException excepcion) {
+        return respuesta(HttpStatus.CONFLICT, "CONFLICTO_USUARIO", excepcion.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(SolicitudUsuarioInvalidaException.class)
+    public ResponseEntity<ErrorResponse> solicitudUsuarioInvalida(SolicitudUsuarioInvalidaException excepcion) {
+        return respuesta(HttpStatus.BAD_REQUEST, "SOLICITUD_INVALIDA", excepcion.getMessage(), List.of());
     }
 
     @ExceptionHandler(RecursoNoEncontradoException.class)

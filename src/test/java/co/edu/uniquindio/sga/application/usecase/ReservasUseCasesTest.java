@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.application.usecase;
 
+import co.edu.uniquindio.sga.application.seguridad.Rol;
 import co.edu.uniquindio.sga.application.seguridad.Solicitante;
 import co.edu.uniquindio.sga.domain.repository.FiltroReservas;
 import co.edu.uniquindio.sga.domain.repository.PeticionPagina;
@@ -110,7 +111,7 @@ class ReservasUseCasesTest {
         assertEquals(EstadoReserva.PENDIENTE,r.getEstado());
     }
     @Test void cancelarConFolioCerradoNoMutaReserva() {
-        Reserva r=e.crear();e.folio(r).cerrar("Administrador autoriza saldo");
+        Reserva r=e.crear();e.folio(r).cerrar(new AutorizacionCierre("admin","Administrador autoriza saldo",ReservasDePrueba.CREACION));
         assertThrows(ReglaDominioException.class,()->cancelar(r,ReservasDePrueba.CREACION,"Cambio","recepcion"));
         assertEquals(EstadoReserva.PENDIENTE,r.getEstado());
     }
@@ -119,7 +120,7 @@ class ReservasUseCasesTest {
         llegada(r,"recepcion");
         assertEquals(EstadoReserva.EN_CURSO,r.getEstado());
         assertEquals(EstadoOperativo.OCUPADO,e.apartamento.getEstadoOperativo());
-        e.folio(r).cerrar(null);
+        e.folio(r).cerrar();
         salida(r);
         assertEquals(EstadoReserva.FINALIZADA,r.getEstado());
         assertEquals(EstadoOperativo.PENDIENTE_PREPARACION,e.apartamento.getEstadoOperativo());
@@ -177,7 +178,7 @@ class ReservasUseCasesTest {
         assertEquals(EstadoReserva.CONFIRMADA,r.getEstado());
     }
     @Test void consultaEstadosSinMezclarlos() {
-        Reserva r=e.crear(); var consulta=new ConsultarReservasUseCase(e.reservas);
+        Reserva r=e.crear(); var consulta=new ConsultarReservasPorEstadoUseCase(e.reservas);
         var pagina=new PeticionPagina(0,10);
         assertEquals(List.of(r),consulta.ejecutar(porEstado(EstadoReserva.PENDIENTE),pagina,EscenarioReservas.RECEPCION).contenido());
         assertTrue(consulta.ejecutar(porEstado(EstadoReserva.CANCELADA),pagina,EscenarioReservas.RECEPCION).contenido().isEmpty());
@@ -185,13 +186,13 @@ class ReservasUseCasesTest {
                 ()->consulta.ejecutar(porEstado(EstadoReserva.PENDIENTE),pagina,EscenarioReservas.RECEPCION).contenido().clear());
     }
     @Test void huespedSoloConsultaSusReservas() {
-        e.crear(); var consulta=new ConsultarReservasUseCase(e.reservas);
+        e.crear(); var consulta=new ConsultarReservasPorEstadoUseCase(e.reservas);
         var otro=new Solicitante("otro@correo.com",Rol.HUESPED,new DocumentoIdentidad("CC-999"));
         assertTrue(consulta.ejecutar(porEstado(null),new PeticionPagina(0,10),otro).contenido().isEmpty());
         var duenio=new Solicitante("ana@correo.com",Rol.HUESPED,new DocumentoIdentidad("CC-1"));
         assertEquals(1,consulta.ejecutar(porEstado(null),new PeticionPagina(0,10),duenio).contenido().size());
     }
-    FiltroReservas porEstado(EstadoReserva estado) { return new FiltroReservas(estado,null,null,null,null); }
+    FiltroReservas porEstado(EstadoReserva estado) { return new FiltroReservas(estado,null,null,null,null,null); }
     Solicitante solicitante(String autor) { return new Solicitante(autor,Rol.RECEPCIONISTA,new DocumentoIdentidad("RECEPCION-1")); }
     void cancelar(Reserva r,LocalDateTime momento,String motivo,String autor) {
         new CancelarReservaUseCase(e.reservas,e.folios,new RetencionCancelacionService(e.politicas),e.reloj(momento))

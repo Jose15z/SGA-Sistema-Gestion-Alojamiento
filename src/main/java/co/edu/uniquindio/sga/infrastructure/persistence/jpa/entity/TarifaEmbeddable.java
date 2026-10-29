@@ -11,8 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-/** Tarifa del apartamento para una temporada (tabla apartamento_tarifas). */
+/** Entrada del histórico de tarifas de un apartamento (tabla apartamento_tarifas). */
 @Embeddable
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class TarifaEmbeddable {
@@ -23,4 +24,7 @@ public class TarifaEmbeddable {
 
     @Column(name = "valor_por_ocupante_noche", nullable = false, precision = 14, scale = 0)
     private BigDecimal valorPorOcupanteNoche;
+
+    @Column(name = "vigente_desde", nullable = false)
+    private LocalDateTime vigenteDesde;
 }

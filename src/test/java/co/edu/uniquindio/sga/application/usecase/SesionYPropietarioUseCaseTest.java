@@ -6,18 +6,18 @@ import co.edu.uniquindio.sga.application.exception.AccesoDenegadoException;
 import co.edu.uniquindio.sga.application.exception.CredencialesInvalidasException;
 import co.edu.uniquindio.sga.application.port.CifradorContrasenas;
 import co.edu.uniquindio.sga.application.port.EmisorTokens;
+import co.edu.uniquindio.sga.application.exception.SolicitudUsuarioInvalidaException;
+import co.edu.uniquindio.sga.application.exception.UsuarioYaRegistradoException;
+import co.edu.uniquindio.sga.application.port.UsuarioRepository;
+import co.edu.uniquindio.sga.application.seguridad.CorreoElectronico;
+import co.edu.uniquindio.sga.application.seguridad.Rol;
 import co.edu.uniquindio.sga.application.seguridad.Solicitante;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
 import co.edu.uniquindio.sga.domain.entity.Ocupante;
 import co.edu.uniquindio.sga.domain.entity.Reserva;
-import co.edu.uniquindio.sga.domain.entity.Usuario;
-import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.repository.ReservaRepository;
-import co.edu.uniquindio.sga.domain.repository.UsuarioRepository;
-import co.edu.uniquindio.sga.domain.service.RegistroUsuarioService;
 import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
-import co.edu.uniquindio.sga.domain.valueobject.CorreoElectronico;
 import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
-import co.edu.uniquindio.sga.domain.valueobject.Rol;
 import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -50,12 +51,15 @@ class SesionYPropietarioUseCaseTest {
     @Mock private EmisorTokens emisor;
     @Mock private ReservaRepository reservas;
 
+    private static final LocalDate NACIMIENTO = LocalDate.of(1995, 4, 12);
+
     @Test
     void registrarHuespedGuardaLaContrasenaCifrada() {
         when(cifrador.cifrar("Clave12345*")).thenReturn("$2a$10$cifrada");
-        var useCase = new RegistrarHuespedUseCase(usuarios, new RegistroUsuarioService(usuarios), cifrador);
+        var useCase = new RegistrarHuespedUseCase(usuarios, cifrador);
 
-        Usuario usuario = useCase.ejecutar(CORREO, new DocumentoIdentidad("1094"), "Ana", "Clave12345*");
+        Usuario usuario = useCase.ejecutar(CORREO, new DocumentoIdentidad("1094"), NACIMIENTO, "Ana", "3001234567",
+                "Clave12345*");
 
         assertEquals("$2a$10$cifrada", usuario.getContrasenaCifrada());
         assertEquals(Rol.HUESPED, usuario.getRol());
@@ -65,17 +69,26 @@ class SesionYPropietarioUseCaseTest {
     @Test
     void registrarHuespedConCorreoExistenteNoGuarda() {
         when(usuarios.existePorCorreo(CORREO)).thenReturn(true);
-        var useCase = new RegistrarHuespedUseCase(usuarios, new RegistroUsuarioService(usuarios), cifrador);
+        var useCase = new RegistrarHuespedUseCase(usuarios, cifrador);
 
-        assertThrows(ReglaDominioException.class,
-                () -> useCase.ejecutar(CORREO, new DocumentoIdentidad("1094"), "Ana", "Clave12345*"));
+        assertThrows(UsuarioYaRegistradoException.class, () -> useCase.ejecutar(CORREO,
+                new DocumentoIdentidad("1094"), NACIMIENTO, "Ana", "3001234567", "Clave12345*"));
+        verify(usuarios, never()).guardar(any());
+    }
+
+    @Test
+    void registrarHuespedConContrasenaInseguraNoConsultaNiGuarda() {
+        var useCase = new RegistrarHuespedUseCase(usuarios, cifrador);
+
+        assertThrows(SolicitudUsuarioInvalidaException.class, () -> useCase.ejecutar(CORREO,
+                new DocumentoIdentidad("1094"), NACIMIENTO, "Ana", "3001234567", "sinmayusculas1"));
         verify(usuarios, never()).guardar(any());
     }
 
     @Test
     void iniciarSesionEmiteTokenSoloConCredencialesValidas() {
         Usuario usuario = Usuario.registrarHuesped(UUID.randomUUID(), CORREO, new DocumentoIdentidad("1094"),
-                "Ana", "hash");
+                NACIMIENTO, "Ana", "3001234567", "hash");
         when(usuarios.obtenerPorCorreo(CORREO)).thenReturn(Optional.of(usuario));
         when(cifrador.coincide("buena", "hash")).thenReturn(true);
         when(cifrador.coincide("mala", "hash")).thenReturn(false);

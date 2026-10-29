@@ -1,16 +1,20 @@
 package co.edu.uniquindio.sga.infrastructure.persistence.jpa;
 
-import co.edu.uniquindio.sga.domain.entity.Usuario;
-import co.edu.uniquindio.sga.domain.repository.UsuarioRepository;
-import co.edu.uniquindio.sga.domain.valueobject.CorreoElectronico;
+import co.edu.uniquindio.sga.application.port.UsuarioRepository;
+import co.edu.uniquindio.sga.application.seguridad.CorreoElectronico;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
+import co.edu.uniquindio.sga.domain.repository.Pagina;
+import co.edu.uniquindio.sga.domain.repository.PeticionPagina;
 import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.entity.UsuarioEntity;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.mapper.UsuarioPersistenceMapper;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.repository.UsuarioJpaDataRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /** Adaptador JPA del puerto UsuarioRepository. */
 @Repository
@@ -29,6 +33,19 @@ public class UsuarioJpaRepository implements UsuarioRepository {
     @Transactional(readOnly = true)
     public Optional<Usuario> obtenerPorCorreo(CorreoElectronico correo) {
         return dataRepository.findByCorreo(correo.valor()).map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Usuario> obtenerPorIdentificacion(UUID identificacion) {
+        return dataRepository.findByIdentificacion(identificacion).map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pagina<Usuario> listarActivos(PeticionPagina pagina) {
+        return PaginacionJpa.aPagina(dataRepository.findByActivoTrue(
+                PaginacionJpa.aPageable(pagina, Sort.by("nombreCompleto"))), mapper::toDomain);
     }
 
     @Override

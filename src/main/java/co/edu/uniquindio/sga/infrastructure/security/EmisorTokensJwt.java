@@ -1,7 +1,7 @@
 package co.edu.uniquindio.sga.infrastructure.security;
 
 import co.edu.uniquindio.sga.application.port.EmisorTokens;
-import co.edu.uniquindio.sga.domain.entity.Usuario;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;

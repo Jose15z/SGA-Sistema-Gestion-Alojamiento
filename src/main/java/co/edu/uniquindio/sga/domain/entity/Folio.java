@@ -17,7 +17,7 @@ public final class Folio {
     private final List<Pago> pagos = new ArrayList<>();
     private boolean cerrado;
     private boolean alojamientoLiquidado;
-    private String autorizacionCierre;
+    private AutorizacionCierre autorizacionCierre;
 
     public Folio(CodigoReserva reserva, Cargo alojamiento) {
         if (reserva == null || alojamiento == null || alojamiento.tipo() != TipoCargo.ALOJAMIENTO) {
@@ -29,7 +29,8 @@ public final class Folio {
 
     /** Reconstruye un folio guardado sin repetir validaciones de registro (Guía 10). */
     public static Folio reconstruir(CodigoReserva reserva, List<Cargo> cargos, List<Pago> pagos,
-                                    boolean cerrado, boolean alojamientoLiquidado, String autorizacionCierre) {
+                                    boolean cerrado, boolean alojamientoLiquidado,
+                                    AutorizacionCierre autorizacionCierre) {
         if (cargos == null || cargos.isEmpty()) {
             throw new ReglaDominioException("Un folio guardado debe conservar su cargo de alojamiento");
         }
@@ -93,13 +94,27 @@ public final class Folio {
                         || c.tipo() == TipoCargo.AJUSTE_ALOJAMIENTO || c.tipo() == TipoCargo.REVERSO_ALOJAMIENTO)
                 .map(Cargo::valor).reduce(Dinero.CERO, Dinero::mas);
     }
-    public void cerrar(String autorizacion) {
+    /** Cierra un folio saldado. */
+    public void cerrar() {
+        cerrar(null);
+    }
+
+    /**
+     * RN-17, 7.7: con saldo distinto de cero solo se cierra con una autorización
+     * explícita (autor y motivo), que queda registrada. Quién puede autorizar
+     * (el administrador) lo verifica la capa de aplicación.
+     */
+    public void cerrar(AutorizacionCierre autorizacion) {
         if (cerrado) throw new ReglaDominioException("El folio ya está cerrado");
-        if (!saldo().esCero() && (autorizacion == null || autorizacion.isBlank())) {
+        if (!saldo().esCero() && autorizacion == null) {
             throw new ReglaDominioException("Cerrar con saldo requiere autorización registrada del administrador");
         }
-        autorizacionCierre = autorizacion == null ? null : autorizacion.trim();
+        autorizacionCierre = saldo().esCero() ? null : autorizacion;
         cerrado = true;
+    }
+
+    public boolean requiereAutorizacionParaCerrar() {
+        return !saldo().esCero();
     }
     private void verificarMovimiento(LocalDateTime momento) {
         if (cerrado) throw new ReglaDominioException("Un folio cerrado no admite movimientos");
@@ -113,7 +128,7 @@ public final class Folio {
     public List<Pago> obtenerPagos() { return List.copyOf(pagos); }
     public boolean estaCerrado() { return cerrado; }
     public boolean alojamientoLiquidado() { return alojamientoLiquidado; }
-    public String getAutorizacionCierre() { return autorizacionCierre; }
+    public AutorizacionCierre getAutorizacionCierre() { return autorizacionCierre; }
     @Override public boolean equals(Object objeto) {
         return objeto instanceof Folio otro && reserva.equals(otro.reserva);
     }

@@ -87,7 +87,8 @@ public class CrearReservaUseCase {
 
         // Servicios de dominio: lo que ningún agregado decide solo
         conciliacion.verificarNoDuplicada(canal, identificadorExterno);            // RN-19
-        disponibilidad.verificarDisponible(apartamento, estancia, grupo.size(), null); // RN-01, 02, 07, 20, 18
+        // 7.5, validaciones (2) a (6) en orden; la (1) la garantiza Estancia
+        disponibilidad.verificarDisponible(apartamento, estancia, grupo.size(), null, ahora.toLocalDate());
         ValorCongelado valor = cotizador.cotizar(identificacion, estancia, grupo);    // RN-05, 06, RP-03
         estanciaMinima.verificar(valor);                                              // RP-01
         VersionPolitica politica = politicas.obtenerVigente().getVersion();           // RN-22

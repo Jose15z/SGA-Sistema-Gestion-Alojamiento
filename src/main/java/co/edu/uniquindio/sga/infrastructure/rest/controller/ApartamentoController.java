@@ -1,5 +1,26 @@
 package co.edu.uniquindio.sga.infrastructure.rest.controller;
 
+import co.edu.uniquindio.sga.application.dto.request.ActualizarApartamentoRequest;
+import co.edu.uniquindio.sga.application.dto.request.RegistrarNovedadApartamentoRequest;
+import co.edu.uniquindio.sga.application.dto.response.CambioCapacidadResponse;
+import co.edu.uniquindio.sga.application.dto.response.NocheCalendarioResponse;
+import co.edu.uniquindio.sga.application.dto.response.NovedadApartamentoResponse;
+import co.edu.uniquindio.sga.application.dto.response.RegistroTarifaResponse;
+import co.edu.uniquindio.sga.application.seguridad.Solicitante;
+import co.edu.uniquindio.sga.application.usecase.ActualizarDatosApartamentoUseCase;
+import co.edu.uniquindio.sga.application.usecase.ConsultarCalendarioOcupacionUseCase;
+import co.edu.uniquindio.sga.application.usecase.RegistrarNovedadApartamentoUseCase;
+import co.edu.uniquindio.sga.domain.valueobject.EstadoOperativo;
+import co.edu.uniquindio.sga.infrastructure.rest.mapper.ReservaRestMapper;
+import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+import org.springframework.security.core.Authentication;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Set;
 import co.edu.uniquindio.sga.application.dto.request.CambiarCapacidadRequest;
 import co.edu.uniquindio.sga.application.dto.request.RegistrarApartamentoRequest;
 import co.edu.uniquindio.sga.application.dto.request.TarifaRequest;
@@ -46,13 +67,14 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.time.LocalDate;
 
-/** Alojamiento y apartamentos (7.3), tarifas (7.4) y búsqueda de disponibilidad (7.5). */
+/** Apartamentos (7.3), tarifas (7.4), búsqueda y calendario (7.5) y novedades (7.6). */
 @RestController
 @RequestMapping("/api/apartamentos")
 @Tag(name = "Apartamentos")
 public class ApartamentoController {
 
     private static final String ID = "^APT-[0-9]{3}$";
+    private static final Set<String> PERSONAL = Set.of("ROLE_ADMINISTRADOR", "ROLE_RECEPCIONISTA");
 
     private final RegistrarApartamentoUseCase registrar;
     private final ConsultarApartamentoUseCase consultar;
@@ -66,7 +88,11 @@ public class ApartamentoController {
     private final DeclararFueraDeServicioUseCase declararFueraDeServicio;
     private final ReincorporarApartamentoUseCase reincorporar;
     private final BuscarApartamentosDisponiblesUseCase buscarDisponibles;
+    private final ActualizarDatosApartamentoUseCase actualizarDatos;
+    private final ConsultarCalendarioOcupacionUseCase calendario;
+    private final RegistrarNovedadApartamentoUseCase registrarNovedad;
     private final ApartamentoRestMapper mapper;
+    private final ReservaRestMapper reservaMapper;
     private final ValorRestMapper valorMapper;
 
     public ApartamentoController(RegistrarApartamentoUseCase registrar, ConsultarApartamentoUseCase consultar,
@@ -78,7 +104,11 @@ public class ApartamentoController {
                                  DeclararFueraDeServicioUseCase declararFueraDeServicio,
                                  ReincorporarApartamentoUseCase reincorporar,
                                  BuscarApartamentosDisponiblesUseCase buscarDisponibles,
-                                 ApartamentoRestMapper mapper, ValorRestMapper valorMapper) {
+                                 ActualizarDatosApartamentoUseCase actualizarDatos,
+                                 ConsultarCalendarioOcupacionUseCase calendario,
+                                 RegistrarNovedadApartamentoUseCase registrarNovedad,
+                                 ApartamentoRestMapper mapper, ReservaRestMapper reservaMapper,
+                                 ValorRestMapper valorMapper) {
         this.registrar = registrar;
         this.consultar = consultar;
         this.listar = listar;
@@ -91,7 +121,11 @@ public class ApartamentoController {
         this.declararFueraDeServicio = declararFueraDeServicio;
         this.reincorporar = reincorporar;
         this.buscarDisponibles = buscarDisponibles;
+        this.actualizarDatos = actualizarDatos;
+        this.calendario = calendario;
+        this.registrarNovedad = registrarNovedad;
         this.mapper = mapper;
+        this.reservaMapper = reservaMapper;
         this.valorMapper = valorMapper;
     }
 
@@ -99,30 +133,42 @@ public class ApartamentoController {
     public ResponseEntity<PaginaResponse<ApartamentoDisponibleResponse>> consultarDisponibles(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaEntrada,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaSalida,
-            @RequestParam @Min(1) int totalOcupantes,
+            @RequestParam @Min(1) @Max(50) int totalOcupantes,
+            @RequestParam(required = false) @Size(max = 50) List<@Past LocalDate> fechasNacimiento,
+            @RequestParam(required = false) @Min(1) Integer capacidadMinima,
             @RequestParam(required = false) @Min(1) Integer dormitoriosMinimos,
+            @RequestParam(required = false) @PositiveOrZero BigDecimal precioMinimo,
+            @RequestParam(required = false) @PositiveOrZero BigDecimal precioMaximo,
+            @RequestParam(required = false) @Size(max = 10) List<@NotBlank String> caracteristicas,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(10) int size) {
+        var filtros = new BuscarApartamentosDisponiblesUseCase.Filtros(capacidadMinima, dormitoriosMinimos,
+                precioMinimo, precioMaximo, caracteristicas);
         var pagina = buscarDisponibles.ejecutar(new Estancia(fechaEntrada, fechaSalida), totalOcupantes,
-                dormitoriosMinimos, new PeticionPagina(page, size));
+                fechasNacimiento, filtros, new PeticionPagina(page, size));
         return ResponseEntity.ok(valorMapper.toPagina(pagina, mapper::toDisponible));
     }
 
     @PostMapping
     public ResponseEntity<ApartamentoResponse> registrar(@Valid @RequestBody RegistrarApartamentoRequest request) {
         IdentificacionApartamento id = new IdentificacionApartamento(request.identificacion());
-        Apartamento apartamento = registrar.ejecutar(id, request.nombre(), request.dormitorios(),
-                new Capacidad(request.capacidad()), mapper.toTarifas(id, request.tarifas()));
+        Apartamento apartamento = registrar.ejecutar(id, request.nombre(), request.descripcion(),
+                request.dormitorios(), new Capacidad(request.capacidad()), request.caracteristicas(),
+                mapper.toTarifas(id, request.tarifas()));
         URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(id.valor()).toUri();
         return ResponseEntity.created(ubicacion).body(mapper.toResponse(apartamento));
     }
 
+    /** Ignora los retirados salvo que se pidan; el personal de servicio filtra por estado operativo (7.1). */
     @GetMapping
     public ResponseEntity<PaginaResponse<ApartamentoResponse>> listar(
+            @RequestParam(required = false) EstadoOperativo estadoOperativo,
+            @RequestParam(defaultValue = "false") boolean incluirRetirados,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(10) int size) {
-        return ResponseEntity.ok(valorMapper.toPagina(listar.ejecutar(new PeticionPagina(page, size)),
+        return ResponseEntity.ok(valorMapper.toPagina(
+                listar.ejecutar(estadoOperativo, incluirRetirados, new PeticionPagina(page, size)),
                 mapper::toResponse));
     }
 
@@ -131,11 +177,64 @@ public class ApartamentoController {
         return ResponseEntity.ok(mapper.toResponse(consultar.ejecutar(new IdentificacionApartamento(identificacion))));
     }
 
+    @PutMapping("/{identificacion}")
+    public ResponseEntity<ApartamentoResponse> actualizarDatos(@PathVariable @Pattern(regexp = ID) String identificacion,
+                                                               @Valid @RequestBody ActualizarApartamentoRequest request) {
+        return ResponseEntity.ok(mapper.toResponse(actualizarDatos.ejecutar(new IdentificacionApartamento(identificacion),
+                request.nombre(), request.descripcion(), request.dormitorios(), request.caracteristicas())));
+    }
+
+    /** Calendario de disponibilidad (público) y de ocupación (con la reserva, para el personal). */
+    @GetMapping("/{identificacion}/calendario")
+    public ResponseEntity<List<NocheCalendarioResponse>> calendario(
+            @PathVariable @Pattern(regexp = ID) String identificacion,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            Authentication autenticacion) {
+        boolean personal = autenticacion != null && autenticacion.getAuthorities().stream()
+                .anyMatch(autoridad -> PERSONAL.contains(autoridad.getAuthority()));
+        return ResponseEntity.ok(calendario.ejecutar(new IdentificacionApartamento(identificacion),
+                        new Estancia(desde, hasta)).stream()
+                .map(noche -> mapper.toNoche(noche, personal))
+                .toList());
+    }
+
+    @GetMapping("/{identificacion}/tarifas/historial")
+    public ResponseEntity<List<RegistroTarifaResponse>> historialTarifas(
+            @PathVariable @Pattern(regexp = ID) String identificacion) {
+        return ResponseEntity.ok(consultar.ejecutar(new IdentificacionApartamento(identificacion))
+                .getHistorialTarifas().stream().map(mapper::toRegistroTarifa).toList());
+    }
+
+    @PostMapping("/{identificacion}/novedades")
+    public ResponseEntity<NovedadApartamentoResponse> registrarNovedad(
+            @PathVariable @Pattern(regexp = ID) String identificacion,
+            @Valid @RequestBody RegistrarNovedadApartamentoRequest request,
+            @Parameter(hidden = true) Solicitante solicitante) {
+        var novedad = registrarNovedad.ejecutar(new IdentificacionApartamento(identificacion), request.descripcion(),
+                request.gravedad(), solicitante);
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
+        return ResponseEntity.created(ubicacion).body(mapper.toNovedad(novedad));
+    }
+
+    @GetMapping("/{identificacion}/novedades")
+    public ResponseEntity<List<NovedadApartamentoResponse>> novedades(
+            @PathVariable @Pattern(regexp = ID) String identificacion) {
+        return ResponseEntity.ok(consultar.ejecutar(new IdentificacionApartamento(identificacion))
+                .getNovedades().stream().map(mapper::toNovedad).toList());
+    }
+
+    /** 7.3: las reservas ya creadas se conservan; si alguna supera la nueva capacidad, se advierte y se lista. */
     @PutMapping("/{identificacion}/capacidad")
-    public ResponseEntity<ApartamentoResponse> cambiarCapacidad(@PathVariable @Pattern(regexp = ID) String identificacion,
-                                                                @Valid @RequestBody CambiarCapacidadRequest request) {
-        return ResponseEntity.ok(mapper.toResponse(cambiarCapacidad.ejecutar(
-                new IdentificacionApartamento(identificacion), new Capacidad(request.capacidad()))));
+    public ResponseEntity<CambioCapacidadResponse> cambiarCapacidad(
+            @PathVariable @Pattern(regexp = ID) String identificacion,
+            @Valid @RequestBody CambiarCapacidadRequest request) {
+        var resultado = cambiarCapacidad.ejecutar(new IdentificacionApartamento(identificacion),
+                new Capacidad(request.capacidad()));
+        String advertencia = resultado.reservasExcedidas().isEmpty() ? null
+                : resultado.reservasExcedidas().size() + " reserva(s) activa(s) superan la nueva capacidad y se conservan";
+        return ResponseEntity.ok(new CambioCapacidadResponse(mapper.toResponse(resultado.apartamento()), advertencia,
+                resultado.reservasExcedidas().stream().map(reservaMapper::toResumen).toList()));
     }
 
     @PutMapping("/{identificacion}/tarifas")

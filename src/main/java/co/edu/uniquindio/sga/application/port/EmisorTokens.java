@@ -1,6 +1,6 @@
 package co.edu.uniquindio.sga.application.port;
 
-import co.edu.uniquindio.sga.domain.entity.Usuario;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
 
 import java.time.Instant;
 
@@ -10,8 +10,8 @@ public interface EmisorTokens {
     TokenSesion emitir(Usuario usuario);
 
     /**
-     * @param token      token firmado
-     * @param expiraEn   instante de expiración
+     * @param token    token firmado
+     * @param expiraEn instante de expiración
      */
     record TokenSesion(String token, Instant expiraEn) {
     }

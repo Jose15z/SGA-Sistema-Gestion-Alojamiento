@@ -7,11 +7,17 @@ import co.edu.uniquindio.sga.domain.valueobject.Tarifa;
 import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoOperativo;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
+import co.edu.uniquindio.sga.domain.valueobject.NovedadApartamento;
+import co.edu.uniquindio.sga.domain.valueobject.RegistroTarifa;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,28 +55,37 @@ public class Apartamento {
     private final IdentificacionApartamento identificacion;
 
     private String nombre;
+    private String descripcion;
     private int dormitorios;
     private Capacidad capacidad;
+    private List<String> caracteristicas;
     private EstadoOperativo estadoOperativo;
     private boolean activo;
     private final Map<TipoTemporada, Tarifa> tarifas = new EnumMap<>(TipoTemporada.class);
+    private final List<RegistroTarifa> historialTarifas = new ArrayList<>();
+    private final List<NovedadApartamento> novedades = new ArrayList<>();
 
     /**
      * Registra un apartamento activo y PREPARADO.
      *
      * <p>7.4: exige tarifa en todas las temporadas, por lo que nunca
      * nace un apartamento vendible con tarifas incompletas.</p>
+     *
+     * @param registro momento del registro: inicia el histórico de tarifas
      */
     public Apartamento(
             IdentificacionApartamento identificacion,
             String nombre,
+            String descripcion,
             int dormitorios,
             Capacidad capacidad,
-            Collection<Tarifa> tarifas
+            List<String> caracteristicas,
+            Collection<Tarifa> tarifas,
+            LocalDateTime registro
     ) {
-        this(identificacion, nombre, dormitorios, capacidad);
-        if (tarifas == null || tarifas.stream().anyMatch(Objects::isNull)) {
-            throw new ReglaDominioException("Las tarifas del apartamento son obligatorias");
+        this(identificacion, nombre, descripcion, dormitorios, capacidad, caracteristicas);
+        if (tarifas == null || tarifas.stream().anyMatch(Objects::isNull) || registro == null) {
+            throw new ReglaDominioException("Las tarifas y el momento de registro del apartamento son obligatorios");
         }
         for (Tarifa tarifa : tarifas) {
             if (!identificacion.equals(tarifa.apartamento())) {
@@ -80,6 +95,7 @@ public class Apartamento {
                 throw new ReglaDominioException(
                         "El apartamento no puede tener dos tarifas para la temporada " + tarifa.temporada());
             }
+            historialTarifas.add(new RegistroTarifa(tarifa.temporada(), tarifa.valorPorOcupanteNoche(), registro));
         }
         if (!tieneTarifasCompletas()) {
             throw new ReglaDominioException(
@@ -91,36 +107,23 @@ public class Apartamento {
     private Apartamento(
             IdentificacionApartamento identificacion,
             String nombre,
+            String descripcion,
             int dormitorios,
-            Capacidad capacidad
+            Capacidad capacidad,
+            List<String> caracteristicas
     ) {
         if (identificacion == null) {
             throw new ReglaDominioException(
                     "El apartamento debe tener identificación"
             );
         }
-
-        if (nombre == null || nombre.isBlank()) {
-            throw new ReglaDominioException(
-                    "El apartamento debe tener un nombre"
-            );
-        }
-
-        if (dormitorios < 1) {
-            throw new ReglaDominioException(
-                    "El apartamento debe tener al menos un dormitorio"
-            );
-        }
-
         if (capacidad == null) {
             throw new ReglaDominioException(
                     "El apartamento debe tener una capacidad"
             );
         }
-
         this.identificacion = identificacion;
-        this.nombre = nombre.trim();
-        this.dormitorios = dormitorios;
+        actualizarDatos(nombre, descripcion, dormitorios, caracteristicas);
         this.capacidad = capacidad;
         this.estadoOperativo = EstadoOperativo.PREPARADO;
         this.activo = false;
@@ -129,21 +132,69 @@ public class Apartamento {
     /**
      * Reconstruye un apartamento guardado sin repetir las validaciones
      * de registro (Guía 10). Solo la usan los adaptadores de persistencia.
+     * Las tarifas vigentes son la entrada más reciente de cada temporada.
      */
     public static Apartamento reconstruir(
             IdentificacionApartamento identificacion,
             String nombre,
+            String descripcion,
             int dormitorios,
             Capacidad capacidad,
+            List<String> caracteristicas,
             EstadoOperativo estadoOperativo,
             boolean activo,
-            Collection<Tarifa> tarifas
+            List<RegistroTarifa> historial,
+            List<NovedadApartamento> novedades
     ) {
-        Apartamento apartamento = new Apartamento(identificacion, nombre, dormitorios, capacidad);
-        tarifas.forEach(tarifa -> apartamento.tarifas.put(tarifa.temporada(), tarifa));
+        Apartamento apartamento = new Apartamento(identificacion, nombre, descripcion, dormitorios, capacidad,
+                caracteristicas);
+        historial.stream()
+                .sorted(Comparator.comparing(RegistroTarifa::vigenteDesde))
+                .forEach(registro -> {
+                    apartamento.historialTarifas.add(registro);
+                    apartamento.tarifas.put(registro.temporada(),
+                            new Tarifa(identificacion, registro.temporada(), registro.valor()));
+                });
         apartamento.estadoOperativo = Objects.requireNonNull(estadoOperativo);
         apartamento.activo = activo;
+        apartamento.novedades.addAll(novedades);
         return apartamento;
+    }
+
+    /**
+     * Actualiza los datos descriptivos (7.3). La capacidad cambia con
+     * {@link #cambiarCapacidad} y las tarifas con {@link #actualizarTarifa}.
+     */
+    public void actualizarDatos(String nuevoNombre, String nuevaDescripcion, int nuevosDormitorios,
+                                List<String> nuevasCaracteristicas) {
+        if (nuevoNombre == null || nuevoNombre.isBlank()) {
+            throw new ReglaDominioException(
+                    "El apartamento debe tener un nombre"
+            );
+        }
+        if (nuevosDormitorios < 1) {
+            throw new ReglaDominioException(
+                    "El apartamento debe tener al menos un dormitorio"
+            );
+        }
+        if (nuevasCaracteristicas == null
+                || nuevasCaracteristicas.stream().anyMatch(c -> c == null || c.isBlank())) {
+            throw new ReglaDominioException("Las características del apartamento no pueden estar vacías");
+        }
+        this.nombre = nuevoNombre.trim();
+        this.descripcion = nuevaDescripcion == null ? "" : nuevaDescripcion.trim();
+        this.dormitorios = nuevosDormitorios;
+        this.caracteristicas = nuevasCaracteristicas.stream().map(String::trim).distinct().toList();
+    }
+
+    /** 7.5: tiene todas las características pedidas (sin distinguir mayúsculas). */
+    public boolean tieneCaracteristicas(List<String> buscadas) {
+        if (buscadas == null || buscadas.isEmpty()) {
+            return true;
+        }
+        return buscadas.stream().allMatch(buscada -> caracteristicas.stream()
+                .anyMatch(propia -> propia.toLowerCase(Locale.ROOT)
+                        .contains(buscada.trim().toLowerCase(Locale.ROOT))));
     }
 
     /** 7.4: hay tarifa para cada temporada del alojamiento. */
@@ -152,12 +203,17 @@ public class Apartamento {
     }
 
     /**
-     * Reemplaza la tarifa de una temporada por un nuevo valor.
+     * Reemplaza la tarifa de una temporada y la agrega al histórico (7.4).
      * No altera el valor congelado de las reservas existentes (RN-22, 3.5).
      */
-    public void actualizarTarifa(TipoTemporada temporada, Dinero valorPorOcupanteNoche) {
+    public void actualizarTarifa(TipoTemporada temporada, Dinero valorPorOcupanteNoche, LocalDateTime ahora) {
         Tarifa nueva = new Tarifa(identificacion, temporada, valorPorOcupanteNoche);
+        if (ahora == null) {
+            throw new ReglaDominioException("El momento del cambio de tarifa es obligatorio");
+        }
+        RegistroTarifa registro = new RegistroTarifa(temporada, valorPorOcupanteNoche, ahora);
         tarifas.put(temporada, nueva);
+        historialTarifas.add(registro);
     }
 
     /** Tarifa vigente del apartamento para una temporada (RN-05). */
@@ -170,8 +226,16 @@ public class Apartamento {
         return tarifa;
     }
 
+    /** Tarifas vigentes, una por temporada. */
     public List<Tarifa> getTarifas() {
         return List.copyOf(tarifas.values());
+    }
+
+    /** Histórico completo de tarifas, del más reciente al más antiguo (7.4). */
+    public List<RegistroTarifa> getHistorialTarifas() {
+        return historialTarifas.stream()
+                .sorted(Comparator.comparing(RegistroTarifa::vigenteDesde).reversed())
+                .toList();
     }
 
     /**
@@ -349,6 +413,14 @@ public class Apartamento {
         return nombre;
     }
 
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public List<String> getCaracteristicas() {
+        return caracteristicas;
+    }
+
     public int getDormitorios() {
         return dormitorios;
     }
@@ -359,6 +431,21 @@ public class Apartamento {
 
     public EstadoOperativo getEstadoOperativo() {
         return estadoOperativo;
+    }
+
+    /** 7.6: registra una novedad; el historial solo crece. */
+    public void registrarNovedad(NovedadApartamento novedad) {
+        if (novedad == null) {
+            throw new ReglaDominioException("La novedad es obligatoria");
+        }
+        novedades.add(novedad);
+    }
+
+    /** Historial de novedades, de la más reciente a la más antigua (7.6). */
+    public List<NovedadApartamento> getNovedades() {
+        return novedades.stream()
+                .sorted(Comparator.comparing(NovedadApartamento::fecha).reversed())
+                .toList();
     }
 
     public boolean estaActivo() {

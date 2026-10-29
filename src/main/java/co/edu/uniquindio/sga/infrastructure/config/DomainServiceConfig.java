@@ -6,7 +6,6 @@ import co.edu.uniquindio.sga.domain.repository.ConfiguracionAlojamiento;
 import co.edu.uniquindio.sga.domain.repository.PoliticaCancelacionRepository;
 import co.edu.uniquindio.sga.domain.repository.ReservaRepository;
 import co.edu.uniquindio.sga.domain.repository.TarifarioRepository;
-import co.edu.uniquindio.sga.domain.repository.UsuarioRepository;
 import co.edu.uniquindio.sga.domain.service.AnticipoReservaService;
 import co.edu.uniquindio.sga.domain.service.BloqueoApartamentoService;
 import co.edu.uniquindio.sga.domain.service.ConciliacionCanalExternoService;
@@ -17,10 +16,10 @@ import co.edu.uniquindio.sga.domain.service.EntregaApartamentoService;
 import co.edu.uniquindio.sga.domain.service.EstanciaMinimaTemporadaService;
 import co.edu.uniquindio.sga.domain.service.ModificacionReservaService;
 import co.edu.uniquindio.sga.domain.service.RegistroApartamentoService;
-import co.edu.uniquindio.sga.domain.service.RegistroUsuarioService;
 import co.edu.uniquindio.sga.domain.service.RetencionCancelacionService;
 import co.edu.uniquindio.sga.domain.service.RetiroApartamentoService;
 import co.edu.uniquindio.sga.domain.service.SalidaApartamentoService;
+import co.edu.uniquindio.sga.domain.service.TitularReservasService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -111,7 +110,7 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public RegistroUsuarioService registroUsuarioService(UsuarioRepository usuarios) {
-        return new RegistroUsuarioService(usuarios);
+    public TitularReservasService titularReservasService(ReservaRepository reservas) {
+        return new TitularReservasService(reservas);
     }
 }

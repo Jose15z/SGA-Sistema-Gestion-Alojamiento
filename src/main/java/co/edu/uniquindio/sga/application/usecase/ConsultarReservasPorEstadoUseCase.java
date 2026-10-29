@@ -12,15 +12,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
 
 /**
- * Consultar reservas (Entrega 1: "Consultar reservas por estado"), ampliado con
- * filtros por apartamento y fechas, paginado y de la más reciente a la más antigua.
+ * Consultar reservas por estado (caso de uso de la Entrega 1). Conserva el filtro por
+ * estado y acepta, opcionales, los demás filtros de 7.5 (apartamento, canal, titular y
+ * fechas); paginado y de la más reciente a la más antigua.
  * Un huésped solo obtiene las reservas de las que es titular.
  */
 @Service
-public class ConsultarReservasUseCase {
+public class ConsultarReservasPorEstadoUseCase {
     private final ReservaRepository reservas;
 
-    public ConsultarReservasUseCase(ReservaRepository reservas) {
+    public ConsultarReservasPorEstadoUseCase(ReservaRepository reservas) {
         this.reservas = Objects.requireNonNull(reservas);
     }
 

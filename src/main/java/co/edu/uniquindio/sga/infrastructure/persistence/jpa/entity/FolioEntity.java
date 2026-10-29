@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,8 +38,15 @@ public class FolioEntity {
     @Column(name = "alojamiento_liquidado", nullable = false)
     private boolean alojamientoLiquidado;
 
-    @Column(name = "autorizacion_cierre", length = 200)
-    private String autorizacionCierre;
+    /** 7.7: autorización de cierre con saldo distinto de cero (null si no hizo falta). */
+    @Column(name = "autorizacion_autor", length = 120)
+    private String autorizacionAutor;
+
+    @Column(name = "autorizacion_motivo", length = 200)
+    private String autorizacionMotivo;
+
+    @Column(name = "autorizacion_momento")
+    private LocalDateTime autorizacionMomento;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "folio_cargos", joinColumns = @JoinColumn(name = "folio_id"))

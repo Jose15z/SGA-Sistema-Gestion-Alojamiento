@@ -85,4 +85,34 @@ class ApiSeguridadYErroresTest {
         mockMvc.perform(get("/api/reservas/RES-2026-99999").header("Authorization", recepcion))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void lasFechasGuardadasSeLeenIguales() throws Exception {
+        // Regresión: con la zona de H2 distinta de la de la JVM las fechas se corrían un día
+        String admin = token("admin@sieteraices.co", "Admin123*");
+        mockMvc.perform(post("/api/apartamentos/APT-102/bloqueos").header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fechaEntrada\":\"2031-02-10\",\"fechaSalida\":\"2031-02-12\",\"motivo\":\"Prueba\"}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/api/apartamentos/APT-102/bloqueos").header("Authorization", admin))
+                .andExpect(jsonPath("$.contenido[?(@.motivo == 'Prueba')].fechaEntrada").value("2031-02-10"));
+    }
+
+    @Test
+    void elPersonalDeServicioPreparaPeroNoGestionaReservas() throws Exception {
+        String servicio = token("servicio@sieteraices.co", "Servicio123*");
+        mockMvc.perform(get("/api/reservas").header("Authorization", servicio))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/apartamentos?estadoOperativo=FUERA_DE_SERVICIO").header("Authorization", servicio))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].identificacion").value("APT-202"));
+    }
+
+    @Test
+    void soloElAdministradorAutorizaCerrarUnFolioConSaldo() throws Exception {
+        mockMvc.perform(put("/api/folios/RES-2025-00003/cerrar").header("Authorization",
+                                token("recepcion@sieteraices.co", "Recepcion123*"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"Saldo pendiente\"}"))
+                .andExpect(status().isForbidden());
+    }
 }

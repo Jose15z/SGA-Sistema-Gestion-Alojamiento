@@ -1,6 +1,8 @@
 # Diagrama de clases — SGA · Entrega 2
 
-Actualiza el diagrama de la Entrega 1 con los cambios del dominio: `Temporada`, `CalendarioTemporadas` y `TipoTemporada`; tarifas dentro de `Apartamento`; `IdentificadorExterno`, mascotas y vehículos en `Reserva`; `Usuario`, `CorreoElectronico` y `Rol`; `MedioPago`; `CapacidadParqueadero`; los servicios del catálogo que faltaban y los nuevos puertos.
+Actualiza el diagrama de la Entrega 1 con los cambios del dominio: `Temporada`, `CalendarioTemporadas` y `TipoTemporada`; tarifas dentro de `Apartamento`; `IdentificadorExterno`, mascotas y vehículos en `Reserva`; `MedioPago`; `CapacidadParqueadero`; los servicios del catálogo que faltaban y los nuevos puertos. En la revisión contra el documento del proyecto se agregaron el agregado `Alojamiento` (con `ServicioAdicional` y `Ubicacion`), el histórico de tarifas y las novedades del `Apartamento`, la `AutorizacionCierre` del folio, la modificación general de la reserva y el calendario de ocupación. `Usuario`, `Rol` y `CorreoElectronico` salieron del dominio (3.6) y se muestran en el tercer diagrama.
+
+Versiones en imagen: [dominio](DiagramaDeClases-dominio.svg), [servicios y puertos](DiagramaDeClases-servicios.svg) y [acceso y seguridad](DiagramaDeClases-seguridad.svg).
 
 Convenciones: composición `*--`, dependencia o referencia por identificador `..>`, implementación `..|>`. Se abrevian parámetros con `...`.
 
@@ -43,6 +45,7 @@ direction TB
     +vencer(...) void
     +estaVencida(...) boolean
     +modificarEstancia(...) Dinero
+    +modificar(apartamento, estancia, ocupantes, ...) Dinero
     +perteneceA(DocumentoIdentidad) boolean
     +totalOcupantes() int
   }
@@ -60,16 +63,23 @@ direction TB
     <<aggregate_root>>
     -IdentificacionApartamento identificacion
     -String nombre
+    -String descripcion
     -int dormitorios
     -Capacidad capacidad
+    -List~String~ caracteristicas
     -EstadoOperativo estadoOperativo
     -boolean activo
     -List~Tarifa~ tarifas
+    -List~RegistroTarifa~ historialTarifas
+    -List~NovedadApartamento~ novedades
     +reconstruir(...)$ Apartamento
+    +actualizarDatos(...) void
+    +tieneCaracteristicas(List) boolean
+    +registrarNovedad(NovedadApartamento) void
     +admite(int) boolean
     +puedeRecibirGrupo() boolean
     +tieneTarifasCompletas() boolean
-    +actualizarTarifa(TipoTemporada, Dinero) void
+    +actualizarTarifa(TipoTemporada, Dinero, LocalDateTime) void
     +tarifaPara(TipoTemporada) Tarifa
     +marcarOcupado() void
     +liberar() void
@@ -88,7 +98,7 @@ direction TB
     -List~Pago~ pagos
     -boolean cerrado
     -boolean alojamientoLiquidado
-    -String autorizacionCierre
+    -AutorizacionCierre autorizacionCierre
     +reconstruir(...)$ Folio
     +registrarCargo(Cargo) void
     +registrarPago(Pago) void
@@ -96,7 +106,9 @@ direction TB
     +liquidarAlojamiento(...) void
     +saldo() Dinero
     +totalPagado() Dinero
-    +cerrar(String) void
+    +cerrar() void
+    +cerrar(AutorizacionCierre) void
+    +requiereAutorizacionParaCerrar() boolean
   }
   class Pago {
     <<entity>>
@@ -129,19 +141,58 @@ direction TB
     +retencionPorNoShow(Dinero) Dinero
     +siguienteVersion(...) PoliticaCancelacion
   }
-  class Usuario {
+  class Alojamiento {
     <<aggregate_root>>
     -UUID identificacion
-    -CorreoElectronico correo
-    -DocumentoIdentidad documento
-    -String nombreCompleto
-    -Rol rol
-    -String contrasenaCifrada
-    -boolean activo
-    +registrarHuesped(...)$ Usuario
-    +reconstruir(...)$ Usuario
-    +puedeIniciarSesion() boolean
-    +desactivar() void
+    -String nombre
+    -String descripcion
+    -String ciudad
+    -String direccion
+    -Ubicacion ubicacion
+    -List~String~ normas
+    -List~ServicioAdicional~ servicios
+    +actualizarDatos(...) void
+    +definirServicios(List) void
+    +servicio(String) ServicioAdicional
+  }
+  class ServicioAdicional {
+    <<value_object>>
+    -String codigo
+    -String nombre
+    -boolean generaCargo
+    -Dinero valor
+    -UnidadCobro unidad
+    +cargoPor(int) Dinero
+  }
+  class Ubicacion {
+    <<value_object>>
+    -BigDecimal latitud
+    -BigDecimal longitud
+  }
+  class RegistroTarifa {
+    <<value_object>>
+    -TipoTemporada temporada
+    -Dinero valor
+    -LocalDateTime vigenteDesde
+  }
+  class NovedadApartamento {
+    <<value_object>>
+    -LocalDateTime fecha
+    -String autor
+    -String descripcion
+    -GravedadNovedad gravedad
+  }
+  class AutorizacionCierre {
+    <<value_object>>
+    -String autor
+    -String motivo
+    -LocalDateTime momento
+  }
+  class NocheCalendario {
+    <<value_object>>
+    -LocalDate noche
+    -EstadoNoche estado
+    -CodigoReserva reserva
   }
   class CalendarioTemporadas {
     <<value_object>>
@@ -205,10 +256,6 @@ direction TB
     <<value_object>>
     -String valor
   }
-  class CorreoElectronico {
-    <<value_object>>
-    -String valor
-  }
   class CapacidadParqueadero {
     <<value_object>>
     -int cupos
@@ -227,18 +274,19 @@ direction TB
     TARJETA_CREDITO
     TRANSFERENCIA_BANCARIA
   }
-  class Rol {
-    <<enumeration>>
-    ADMINISTRADOR
-    RECEPCIONISTA
-    HUESPED
-  }
   class CanalOrigen {
     <<enumeration>>
     PORTAL
     DIRECTO
     EXTERNO
-    +loRegistra(Rol) boolean
+  }
+  class EstadoNoche {
+    <<enumeration>>
+    DISPONIBLE
+    RESERVADA
+    BLOQUEADA
+    EN_PREPARACION
+    NO_VENDIBLE
   }
   class EstadoReserva {
     <<enumeration>>
@@ -276,13 +324,16 @@ Pago *-- MedioPago
 Bloqueo *-- Estancia : periodo
 CalendarioTemporadas *-- Temporada
 Temporada *-- TipoTemporada
-Usuario *-- CorreoElectronico
-Usuario *-- Rol
+Apartamento *-- RegistroTarifa : historial
+Apartamento *-- NovedadApartamento : novedades
+Folio *-- AutorizacionCierre
+Alojamiento *-- ServicioAdicional : servicios
+Alojamiento *-- Ubicacion
+NocheCalendario *-- EstadoNoche
 Reserva ..> Apartamento : IdentificacionApartamento
 Reserva ..> PoliticaCancelacion : VersionPolitica
 Folio ..> Reserva : CodigoReserva
 Bloqueo ..> Apartamento : IdentificacionApartamento
-Reserva ..> Usuario : propietario por documento del titular
 ```
 
 ## Servicios de dominio y puertos
@@ -291,8 +342,9 @@ Reserva ..> Usuario : propietario por documento del titular
 classDiagram
 direction LR
   class DisponibilidadApartamentoService {
-    +verificarDisponible(...) void
+    +verificarDisponible(apto, estancia, total, excluida, hoy) void
     +estaDisponible(...) boolean
+    +calendario(Apartamento, Estancia) List~NocheCalendario~
   }
   class CotizadorEstanciaService {
     +cotizar(...) ValorCongelado
@@ -331,8 +383,8 @@ direction LR
   class RegistroApartamentoService {
     +verificarIdentificacionDisponible(...) void
   }
-  class RegistroUsuarioService {
-    +verificarDisponible(...) void
+  class TitularReservasService {
+    +verificarSinReservasActivas(DocumentoIdentidad) void
   }
   class ReservaRepository {
     <<interface>>
@@ -342,13 +394,16 @@ direction LR
     +buscarActivasPorApartamento()
     +buscar(FiltroReservas, PeticionPagina) Pagina
     +existePorCanalEIdentificadorExterno()
+    +existenActivasDelTitular()
+    +buscarLlegadasPrevistas()
+    +buscarSalidasPrevistas()
     +buscarActivasEnPeriodo()
   }
   class ApartamentoRepository {
     <<interface>>
     +obtenerPorIdentificacion()
     +guardar()
-    +listar()
+    +listar(estado, incluirRetirados, pagina)
     +buscarActivosConCapacidadPara()
     +existe()
   }
@@ -376,11 +431,9 @@ direction LR
     +listar()
     +guardar()
   }
-  class UsuarioRepository {
+  class AlojamientoRepository {
     <<interface>>
-    +obtenerPorCorreo()
-    +existePorCorreo()
-    +existePorDocumento()
+    +obtener() Optional
     +guardar()
   }
   class TarifarioRepository {
@@ -413,7 +466,78 @@ BloqueoApartamentoService ..> ReservaRepository
 BloqueoApartamentoService ..> BloqueoRepository
 RetiroApartamentoService ..> ReservaRepository
 RegistroApartamentoService ..> ApartamentoRepository
-RegistroUsuarioService ..> UsuarioRepository
+TitularReservasService ..> ReservaRepository
+```
+
+## Acceso y seguridad (capa de aplicación, 3.6)
+
+El dominio no conoce al usuario: el vínculo con el negocio es el documento del titular (`Reserva.perteneceA`).
+
+```mermaid
+classDiagram
+direction LR
+  class Usuario {
+    -UUID identificacion
+    -CorreoElectronico correo
+    -DocumentoIdentidad documento
+    -LocalDate fechaNacimiento
+    -String nombreCompleto
+    -String telefono
+    -Rol rol
+    -String contrasenaCifrada
+    -boolean activo
+    +registrarHuesped(...)$ Usuario
+    +crearConRol(...)$ Usuario
+    +actualizarPerfil(String, String) void
+    +cambiarContrasena(String) void
+    +asignarRol(Rol) void
+    +desactivar() void
+  }
+  class Rol {
+    <<enumeration>>
+    ADMINISTRADOR
+    RECEPCIONISTA
+    PERSONAL_SERVICIO
+    HUESPED
+    +gestionaReservas() boolean
+  }
+  class CorreoElectronico {
+    -String valor
+  }
+  class CodigoRecuperacion {
+    -CorreoElectronico correo
+    -String codigoCifrado
+    -LocalDateTime expiraEn
+    -boolean usado
+    +estaVigente(LocalDateTime) boolean
+    +marcarUsado() void
+  }
+  class Solicitante {
+    -String usuario
+    -Rol rol
+    -DocumentoIdentidad documento
+    +verificarAcceso(Reserva) void
+    +verificarPuedeReservar(CanalOrigen, DocumentoIdentidad) void
+  }
+  class PoliticaContrasena {
+    +verificar(String)$ void
+  }
+  class UsuarioRepository {
+    <<interface>>
+  }
+  class CodigoRecuperacionRepository {
+    <<interface>>
+  }
+  class NotificadorCorreo {
+    <<interface>>
+    +enviarCodigoRecuperacion(...) void
+  }
+Usuario *-- CorreoElectronico
+Usuario *-- Rol
+CodigoRecuperacion *-- CorreoElectronico
+Solicitante *-- Rol
+UsuarioRepository ..> Usuario
+CodigoRecuperacionRepository ..> CodigoRecuperacion
 ```
 
 ## Adaptadores de infraestructura
@@ -426,7 +550,11 @@ RegistroUsuarioService ..> UsuarioRepository
 | `BloqueoRepository` | `BloqueoJpaRepository` | `BloqueoRepositoryEnMemoria` |
 | `PoliticaCancelacionRepository` | `PoliticaCancelacionJpaRepository` | `PoliticaCancelacionRepositoryEnMemoria` |
 | `TemporadaRepository` | `TemporadaJpaRepository` | `TemporadaRepositoryEnMemoria` |
-| `UsuarioRepository` | `UsuarioJpaRepository` | `UsuarioRepositoryEnMemoria` |
+| `AlojamientoRepository` | `AlojamientoJpaRepository` | `AlojamientoRepositoryEnMemoria` |
+| `UsuarioRepository` (aplicación) | `UsuarioJpaRepository` | `UsuarioRepositoryEnMemoria` |
+| `CodigoRecuperacionRepository` (aplicación) | `CodigoRecuperacionJpaRepository` | `CodigoRecuperacionRepositoryEnMemoria` |
+| `NotificadorCorreo` (aplicación) | `NotificadorCorreoLocal` (I-02: escribe en el log) | mock |
+| `ConfiguracionSeguridad` (aplicación) | `ConfiguracionSeguridadPropiedades` | mock |
 | `GeneradorCodigoReserva` | `GeneradorCodigoReservaJpa` | `GeneradorCodigoReservaEnMemoria` |
 | `TarifarioRepository` | `TarifarioRepositoryAdapter` (temporada por `CalendarioTemporadas`, tarifa por `Apartamento`) | lambda en las pruebas |
 | `ConfiguracionAlojamiento` | `ParametrosAlojamiento` creado desde `PropiedadesAlojamiento` | `ParametrosDePrueba` |

@@ -3,6 +3,7 @@ package co.edu.uniquindio.sga.infrastructure.rest.controller;
 import co.edu.uniquindio.sga.application.dto.request.CerrarFolioRequest;
 import co.edu.uniquindio.sga.application.dto.request.RegistrarCargoRequest;
 import co.edu.uniquindio.sga.application.dto.request.RegistrarPagoRequest;
+import co.edu.uniquindio.sga.application.dto.request.RegistrarServicioFolioRequest;
 import co.edu.uniquindio.sga.application.dto.response.CargoResponse;
 import co.edu.uniquindio.sga.application.dto.response.FolioResponse;
 import co.edu.uniquindio.sga.application.dto.response.PagoResponse;
@@ -11,6 +12,7 @@ import co.edu.uniquindio.sga.application.usecase.CerrarFolioUseCase;
 import co.edu.uniquindio.sga.application.usecase.ConsultarFolioUseCase;
 import co.edu.uniquindio.sga.application.usecase.RegistrarCargoUseCase;
 import co.edu.uniquindio.sga.application.usecase.RegistrarPagoUseCase;
+import co.edu.uniquindio.sga.application.usecase.RegistrarServicioAdicionalUseCase;
 import co.edu.uniquindio.sga.domain.valueobject.CodigoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.Dinero;
 import co.edu.uniquindio.sga.infrastructure.rest.mapper.FolioRestMapper;
@@ -40,14 +42,17 @@ public class FolioController {
     private final ConsultarFolioUseCase consultar;
     private final RegistrarPagoUseCase registrarPago;
     private final RegistrarCargoUseCase registrarCargo;
+    private final RegistrarServicioAdicionalUseCase registrarServicio;
     private final CerrarFolioUseCase cerrar;
     private final FolioRestMapper mapper;
 
     public FolioController(ConsultarFolioUseCase consultar, RegistrarPagoUseCase registrarPago,
-                           RegistrarCargoUseCase registrarCargo, CerrarFolioUseCase cerrar, FolioRestMapper mapper) {
+                           RegistrarCargoUseCase registrarCargo, RegistrarServicioAdicionalUseCase registrarServicio,
+                           CerrarFolioUseCase cerrar, FolioRestMapper mapper) {
         this.consultar = consultar;
         this.registrarPago = registrarPago;
         this.registrarCargo = registrarCargo;
+        this.registrarServicio = registrarServicio;
         this.cerrar = cerrar;
         this.mapper = mapper;
     }
@@ -76,10 +81,21 @@ public class FolioController {
         return ResponseEntity.created(URI.create("/api/folios/" + codigoReserva)).body(cargo);
     }
 
+    /** L-17: el valor lo calcula el sistema con el catálogo del alojamiento y la cantidad. */
+    @PostMapping("/{codigoReserva}/servicios")
+    public ResponseEntity<CargoResponse> registrarServicio(@PathVariable @Pattern(regexp = CODIGO) String codigoReserva,
+                                                           @Valid @RequestBody RegistrarServicioFolioRequest request,
+                                                           @Parameter(hidden = true) Solicitante solicitante) {
+        CargoResponse cargo = mapper.toCargoResponse(registrarServicio.ejecutar(new CodigoReserva(codigoReserva),
+                request.codigoServicio(), request.cantidad(), solicitante));
+        return ResponseEntity.created(URI.create("/api/folios/" + codigoReserva)).body(cargo);
+    }
+
     @PutMapping("/{codigoReserva}/cerrar")
     public ResponseEntity<FolioResponse> cerrar(@PathVariable @Pattern(regexp = CODIGO) String codigoReserva,
-                                                @Valid @RequestBody CerrarFolioRequest request) {
+                                                @Valid @RequestBody CerrarFolioRequest request,
+                                                @Parameter(hidden = true) Solicitante solicitante) {
         return ResponseEntity.ok(mapper.toResponse(cerrar.ejecutar(new CodigoReserva(codigoReserva),
-                request.autorizacion())));
+                request.motivo(), solicitante)));
     }
 }

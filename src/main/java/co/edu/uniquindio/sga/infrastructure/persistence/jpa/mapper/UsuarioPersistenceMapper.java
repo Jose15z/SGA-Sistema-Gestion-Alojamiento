@@ -1,7 +1,7 @@
 package co.edu.uniquindio.sga.infrastructure.persistence.jpa.mapper;
 
-import co.edu.uniquindio.sga.domain.entity.Usuario;
-import co.edu.uniquindio.sga.domain.valueobject.CorreoElectronico;
+import co.edu.uniquindio.sga.application.seguridad.CorreoElectronico;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
 import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.entity.UsuarioEntity;
 import org.mapstruct.Mapper;
@@ -22,7 +22,8 @@ public interface UsuarioPersistenceMapper {
             return null;
         }
         return Usuario.reconstruir(entity.getIdentificacion(), new CorreoElectronico(entity.getCorreo()),
-                new DocumentoIdentidad(entity.getDocumento()), entity.getNombreCompleto(), entity.getRol(),
+                new DocumentoIdentidad(entity.getDocumento()), entity.getFechaNacimiento(), entity.getNombreCompleto(),
+                entity.getTelefono(), entity.getRol(),
                 entity.getContrasenaCifrada(), entity.isActivo());
     }
 }

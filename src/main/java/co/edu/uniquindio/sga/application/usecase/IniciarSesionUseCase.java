@@ -3,9 +3,9 @@ package co.edu.uniquindio.sga.application.usecase;
 import co.edu.uniquindio.sga.application.exception.CredencialesInvalidasException;
 import co.edu.uniquindio.sga.application.port.CifradorContrasenas;
 import co.edu.uniquindio.sga.application.port.EmisorTokens;
-import co.edu.uniquindio.sga.domain.entity.Usuario;
-import co.edu.uniquindio.sga.domain.repository.UsuarioRepository;
-import co.edu.uniquindio.sga.domain.valueobject.CorreoElectronico;
+import co.edu.uniquindio.sga.application.port.UsuarioRepository;
+import co.edu.uniquindio.sga.application.seguridad.CorreoElectronico;
+import co.edu.uniquindio.sga.application.seguridad.Usuario;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

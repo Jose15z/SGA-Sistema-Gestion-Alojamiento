@@ -4,11 +4,11 @@ import co.edu.uniquindio.sga.EscenarioReservas;
 import co.edu.uniquindio.sga.ReservasDePrueba;
 import co.edu.uniquindio.sga.domain.entity.Bloqueo;
 import co.edu.uniquindio.sga.domain.entity.Reserva;
-import co.edu.uniquindio.sga.domain.entity.Usuario;
+import co.edu.uniquindio.sga.domain.entity.Apartamento;
+import co.edu.uniquindio.sga.domain.entity.Ocupante;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.repository.TarifarioRepository;
 import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
-import co.edu.uniquindio.sga.domain.valueobject.CorreoElectronico;
 import co.edu.uniquindio.sga.domain.valueobject.Dinero;
 import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
 import co.edu.uniquindio.sga.domain.valueobject.Estancia;
@@ -18,11 +18,12 @@ import co.edu.uniquindio.sga.domain.valueobject.Tarifa;
 import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.valueobject.ValorCongelado;
 import co.edu.uniquindio.sga.domain.valueobject.Vehiculo;
-import co.edu.uniquindio.sga.infrastructure.persistence.inmemory.UsuarioRepositoryEnMemoria;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.UUID;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -98,24 +99,61 @@ class ServiciosEntrega2Test {
                 new CotizadorEstanciaService(tarifario, e.config), new EstanciaMinimaTemporadaService(e.config));
         Estancia mas = new Estancia(reserva.getEstancia().fechaEntrada(), reserva.getEstancia().fechaSalida().plusDays(1));
 
-        ValorCongelado valor = servicio.validarModificacion(reserva, e.apartamento, mas);
+        ValorCongelado valor = servicio.validarModificacion(reserva, e.apartamento, mas,
+                ReservasDePrueba.CREACION.toLocalDate());
 
         assertEquals(3, valor.noches());
     }
 
     @Test
-    void registroDeUsuarioExigeCorreoYDocumentoUnicos() {
-        UsuarioRepositoryEnMemoria usuarios = new UsuarioRepositoryEnMemoria();
-        RegistroUsuarioService servicio = new RegistroUsuarioService(usuarios);
-        CorreoElectronico correo = new CorreoElectronico("ana@correo.com");
-        DocumentoIdentidad documento = new DocumentoIdentidad("1094");
-        usuarios.guardar(Usuario.registrarHuesped(UUID.randomUUID(), correo, documento, "Ana", "hash"));
+    void unTitularConReservasActivasNoPuedeEliminarse() {
+        Reserva reserva = e.crear();
+        TitularReservasService servicio = new TitularReservasService(e.reservas);
 
-        assertThrows(ReglaDominioException.class, () -> servicio.verificarDisponible(correo, new DocumentoIdentidad("9")));
         assertThrows(ReglaDominioException.class,
-                () -> servicio.verificarDisponible(new CorreoElectronico("otra@correo.com"), documento));
-        assertDoesNotThrow(() -> servicio.verificarDisponible(new CorreoElectronico("otra@correo.com"),
-                new DocumentoIdentidad("9")));
+                () -> servicio.verificarSinReservasActivas(reserva.getTitular().getDocumento()));
+        assertDoesNotThrow(() -> servicio.verificarSinReservasActivas(new DocumentoIdentidad("SIN-RESERVAS")));
+    }
+
+    @Test
+    void modificarElGrupoRepiteLaCapacidadYRecalculaElValor() {
+        Reserva reserva = e.crear();
+        ModificacionReservaService servicio = modificacion();
+        List<Ocupante> grupo = new ArrayList<>(reserva.getOcupantes());
+        grupo.add(new Ocupante(new DocumentoIdentidad("CC-ACOMP"), "Acompañante", LocalDate.of(1990, 1, 1),
+                LocalDate.of(2026, 1, 1)));
+
+        ValorCongelado valor = servicio.validarModificacion(reserva, e.apartamento, reserva.getEstancia(), grupo,
+                ReservasDePrueba.CREACION.toLocalDate());
+
+        assertEquals(Dinero.de(400_000), valor.total());
+        List<Ocupante> excedido = new ArrayList<>(grupo);
+        for (int i = 0; i < 4; i++) {
+            excedido.add(new Ocupante(new DocumentoIdentidad("CC-X" + i), "Extra " + i, LocalDate.of(1990, 1, 1),
+                    LocalDate.of(2026, 1, 1)));
+        }
+        assertThrows(ReglaDominioException.class, () -> servicio.validarModificacion(reserva, e.apartamento,
+                reserva.getEstancia(), excedido, ReservasDePrueba.CREACION.toLocalDate()));
+    }
+
+    @Test
+    void modificarElApartamentoExigeQueElDestinoEsteDisponible() {
+        Reserva reserva = e.crear();
+        Apartamento destino = EscenarioReservas.apartamento("APT-302", "Destino", 2, 4);
+        e.apartamentos.guardar(destino);
+        ModificacionReservaService servicio = modificacion();
+
+        assertEquals(2, servicio.validarModificacion(reserva, destino, reserva.getEstancia(),
+                ReservasDePrueba.CREACION.toLocalDate()).noches());
+        destino.desactivar();
+        assertThrows(ReglaDominioException.class, () -> servicio.validarModificacion(reserva, destino,
+                reserva.getEstancia(), ReservasDePrueba.CREACION.toLocalDate()));
+    }
+
+    private ModificacionReservaService modificacion() {
+        TarifarioRepository tarifario = (apartamento, noche) -> new Tarifa(apartamento, TipoTemporada.BASE, Dinero.de(100_000));
+        return new ModificacionReservaService(new DisponibilidadApartamentoService(e.reservas, e.bloqueos, e.config),
+                new CotizadorEstanciaService(tarifario, e.config), new EstanciaMinimaTemporadaService(e.config));
     }
 
     @Test

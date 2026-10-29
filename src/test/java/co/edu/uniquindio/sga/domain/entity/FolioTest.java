@@ -33,19 +33,24 @@ class FolioTest {
         assertThrows(UnsupportedOperationException.class,()->folio.obtenerPagos().add(pago(1)));
     }
     @Test void cierreConSaldoRequiereAutorizacion() {
-        assertThrows(ReglaDominioException.class,()->folio.cerrar(" "));
+        assertThrows(ReglaDominioException.class,()->folio.cerrar());
         assertFalse(folio.estaCerrado());
-        folio.cerrar("Administrador autoriza cobro posterior");
+        assertTrue(folio.requiereAutorizacionParaCerrar());
+        AutorizacionCierre autorizacion=new AutorizacionCierre("admin@sieteraices.co","Cobro posterior acordado",
+                ReservasDePrueba.CREACION);
+        folio.cerrar(autorizacion);
         assertTrue(folio.estaCerrado());
-        assertEquals("Administrador autoriza cobro posterior",folio.getAutorizacionCierre());
+        assertEquals(autorizacion,folio.getAutorizacionCierre());
+        assertEquals("admin@sieteraices.co",folio.getAutorizacionCierre().autor());
         assertThrows(ReglaDominioException.class,()->folio.registrarPago(pago(1)));
         assertThrows(ReglaDominioException.class,()->folio.registrarCargo(cargo(TipoCargo.SERVICIO_ADICIONAL,1)));
     }
     @Test void cierreSinSaldoNoRequiereAutorizacion() {
-        folio.registrarPago(pago(200_000));folio.cerrar(null);assertTrue(folio.estaCerrado());
+        folio.registrarPago(pago(200_000));folio.cerrar();assertTrue(folio.estaCerrado());
+        assertNull(folio.getAutorizacionCierre());
     }
     @Test void cierreConSaldoAFavorTambienRequiereAutorizacion() {
-        folio.registrarPago(pago(250_000));assertThrows(ReglaDominioException.class,()->folio.cerrar(null));
+        folio.registrarPago(pago(250_000));assertThrows(ReglaDominioException.class,()->folio.cerrar());
     }
     @Test void liquidacionRevierteAlojamientoYAjustesPeroConservaExtras() {
         folio.registrarCargo(cargo(TipoCargo.AJUSTE_ALOJAMIENTO,-50_000));

@@ -9,6 +9,8 @@ import co.edu.uniquindio.sga.domain.valueobject.Tarifa;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -18,16 +20,22 @@ public class RegistrarApartamentoUseCase {
     private final ApartamentoRepository apartamentos;
     private final RegistroApartamentoService registro;
 
-    public RegistrarApartamentoUseCase(ApartamentoRepository apartamentos, RegistroApartamentoService registro) {
+    private final Clock reloj;
+
+    public RegistrarApartamentoUseCase(ApartamentoRepository apartamentos, RegistroApartamentoService registro,
+                                       Clock reloj) {
         this.apartamentos = Objects.requireNonNull(apartamentos);
         this.registro = Objects.requireNonNull(registro);
+        this.reloj = Objects.requireNonNull(reloj);
     }
 
     @Transactional
-    public Apartamento ejecutar(IdentificacionApartamento identificacion, String nombre, int dormitorios,
-                                Capacidad capacidad, List<Tarifa> tarifas) {
+    public Apartamento ejecutar(IdentificacionApartamento identificacion, String nombre, String descripcion,
+                                int dormitorios, Capacidad capacidad, List<String> caracteristicas,
+                                List<Tarifa> tarifas) {
         registro.verificarIdentificacionDisponible(identificacion);   // L-04
-        Apartamento apartamento = new Apartamento(identificacion, nombre, dormitorios, capacidad, tarifas);
+        Apartamento apartamento = new Apartamento(identificacion, nombre, descripcion, dormitorios, capacidad,
+                caracteristicas, tarifas, LocalDateTime.now(reloj));
         apartamentos.guardar(apartamento);
         return apartamento;
     }

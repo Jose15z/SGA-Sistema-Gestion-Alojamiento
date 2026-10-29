@@ -52,10 +52,13 @@ Swagger UI muestra dos definiciones: el contrato `docs/api/openapi.yaml` (selecc
 |---|---|---|
 | admin@sieteraices.co | Admin123* | ADMINISTRADOR |
 | recepcion@sieteraices.co | Recepcion123* | RECEPCIONISTA |
+| servicio@sieteraices.co | Servicio123* | PERSONAL_SERVICIO |
 | ana.ramirez@correo.com | Huesped123* | HUESPED |
 | carlos.gomez@correo.com | Huesped123* | HUESPED |
 
-Además se cargan los 7 apartamentos de la Ficha con sus tarifas, las temporadas Alta y Especial, la política de cancelación versión 1, un bloqueo y 5 reservas (RES-2025-00001 a RES-2025-00005) con sus folios. Las fechas de las reservas son relativas al día de arranque.
+Además se cargan el alojamiento con sus normas y servicios adicionales, los 7 apartamentos de la Ficha con descripción, características e histórico de tarifas (APT-202 está FUERA_DE_SERVICIO), las temporadas Alta y Especial, la política de cancelación versión 1, un bloqueo vigente y 7 reservas (RES-2025-00001 a RES-2025-00007) que cubren los seis estados y los canales PORTAL, DIRECTO y EXTERNO, con sus folios. Las fechas de las reservas son relativas al día de arranque.
+
+La recuperación de contraseña usa un notificador local: el código de 6 dígitos aparece en la consola de la aplicación.
 
 ### Colección de pruebas
 
@@ -65,14 +68,14 @@ Con la aplicación **recién arrancada**, importar la colección en Postman y ej
 npx newman run docs/pruebas/SGA-Entrega2.postman_collection.json
 ```
 
-Cubre el flujo completo de una reserva, un 409 por cada regla que expone la API y los 400, 401, 403 y 404 (122 solicitudes, 225 aserciones). Para repetirla, reinicie la aplicación: la base H2 vive en memoria.
+Cubre usuarios y roles, el alojamiento, el flujo completo de una reserva (incluida su modificación), la operación diaria, un 409 por cada regla que expone la API y los 400, 401, 403 y 404 (179 solicitudes, 334 aserciones). Para repetirla, reinicie la aplicación: la base H2 vive en memoria.
 
 ## Arquitectura
 
 ```text
 co.edu.uniquindio.sga
 ├── domain                      ← Java puro: sin Spring, JPA ni Lombok
-│   ├── entity                  Reserva, Apartamento, Folio, Bloqueo, PoliticaCancelacion, Usuario, Ocupante, Pago
+│   ├── entity                  Reserva, Apartamento, Alojamiento, Folio, Bloqueo, PoliticaCancelacion, Ocupante, Pago
 │   ├── valueobject             Estancia, Capacidad, Temporada, CalendarioTemporadas, Tarifa, Dinero, ...
 │   ├── service                 Servicios del catálogo (disponibilidad, cotización, retención, parqueadero, ...)
 │   ├── repository              Puertos (uno por agregado) y Pagina, PeticionPagina, FiltroReservas
@@ -81,14 +84,15 @@ co.edu.uniquindio.sga
 │   ├── usecase                 Casos de uso con @Service y @Transactional
 │   ├── dto/request, response   DTOs record con Bean Validation y ErrorResponse
 │   ├── exception               Recursos inexistentes (→ 404), acceso denegado (→ 403), credenciales (→ 401)
-│   ├── port                    CifradorContrasenas, EmisorTokens
-│   └── seguridad               Solicitante: verificación por propietario
+│   ├── port                    UsuarioRepository, CodigoRecuperacionRepository, NotificadorCorreo, CifradorContrasenas, EmisorTokens
+│   └── seguridad               Usuario, Rol, CorreoElectronico, PoliticaContrasena y Solicitante (el dominio no conoce al usuario, 3.6)
 └── infrastructure
     ├── rest                    Controllers, mappers MapStruct y GlobalExceptionHandler
     ├── persistence/jpa         Entidades JPA, embebibles, mappers y adaptadores de cada puerto
     ├── persistence/inmemory    Adaptadores en memoria para pruebas (no son beans)
     ├── security                JWT, BCrypt y matriz de roles
-    ├── config                  DomainServiceConfig, parámetros de la Ficha, reloj, Swagger
+    ├── notificacion            NotificadorCorreoLocal (I-02)
+    ├── config                  DomainServiceConfig, parámetros de la Ficha, zona horaria, reloj, Swagger
     └── scheduling              Vencimiento automático de reservas PENDIENTE (RN-21)
 ```
 
@@ -99,3 +103,4 @@ co.edu.uniquindio.sga
 - Las transiciones de estado usan métodos con intención de negocio (`confirmar`, `cancelar`, `registrarLlegada`, `declararNoShow`), nunca un `cambiarEstado` genérico.
 - Los parámetros del alojamiento (umbral de edad, horarios, preparación, plazo, anticipo, no-show a las **20:00**, descuento, mascotas, vehículos) están en `application.properties` y se cambian sin recompilar.
 - Ningún registro de negocio se borra físicamente: retiro de apartamentos, levantamiento de bloqueos y desactivación de usuarios son eliminaciones lógicas.
+- El usuario es un concepto de acceso y vive en `application`; el dominio solo conoce al titular de la reserva por su documento.

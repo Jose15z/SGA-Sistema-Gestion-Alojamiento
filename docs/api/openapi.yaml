@@ -16,9 +16,13 @@ security:
 - bearerAuth: []
 tags:
 - name: Autenticación
-  description: Usuarios y seguridad (7.2)
+  description: Registro, sesión y recuperación de contraseña (7.2)
+- name: Usuarios
+  description: Perfil y gestión de usuarios y roles (7.2)
+- name: Alojamiento
+  description: Datos, normas y servicios adicionales (7.3)
 - name: Apartamentos
-  description: Alojamiento y apartamentos (7.3) y tarifas (7.4)
+  description: Apartamentos (7.3), tarifas (7.4) y novedades (7.6)
 - name: Bloqueos
   description: Bloqueos administrativos (7.3)
 - name: Temporadas
@@ -88,6 +92,301 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /auth/recuperacion:
+    post:
+      tags:
+      - Autenticación
+      summary: Solicitar código de recuperación
+      description: Envía al correo registrado un código de 6 dígitos de un solo uso y 15 minutos de vigencia (7.2). Responde
+        202 exista o no el correo, para no revelar qué cuentas existen. En local el correo se escribe en el log (I-02).
+      operationId: solicitarRecuperacion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolicitarRecuperacionRequest'
+      responses:
+        '202':
+          description: Solicitud recibida
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/recuperacion/restablecer:
+    post:
+      tags:
+      - Autenticación
+      summary: Restablecer la contraseña
+      description: Con el código vigente y no usado; el código queda marcado como usado (7.2).
+      operationId: restablecerContrasena
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestablecerContrasenaRequest'
+      responses:
+        '204':
+          description: Contraseña restablecida
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /usuarios/yo:
+    get:
+      tags:
+      - Usuarios
+      summary: Consultar mi perfil
+      description: 'Datos del usuario autenticado, sin la contraseña.
+
+
+        Roles: cualquier usuario autenticado.'
+      operationId: consultarPerfil
+      responses:
+        '200':
+          description: Perfil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - Usuarios
+      summary: Actualizar mi perfil
+      description: 'Nombre y teléfono; el correo no es editable (7.2).
+
+
+        Roles: cualquier usuario autenticado.'
+      operationId: actualizarPerfil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarPerfilRequest'
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /usuarios/yo/contrasena:
+    put:
+      tags:
+      - Usuarios
+      summary: Cambiar mi contraseña
+      description: 'Con la contraseña actual y la nueva, que debe ser segura (7.2).
+
+
+        Roles: cualquier usuario autenticado.'
+      operationId: cambiarContrasena
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarContrasenaRequest'
+      responses:
+        '204':
+          description: Contraseña cambiada
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /usuarios:
+    get:
+      tags:
+      - Usuarios
+      summary: Listar usuarios activos
+      description: 'Paginado de 10 en 10, por nombre.
+
+
+        Roles: ADMINISTRADOR.'
+      operationId: listarUsuarios
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Página de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaUsuarios'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Usuarios
+      summary: Crear un usuario con rol
+      description: 'Los roles internos solo los asigna un administrador (7.2).
+
+
+        Roles: ADMINISTRADOR.'
+      operationId: crearUsuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearUsuarioRequest'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+          headers:
+            Location:
+              description: URL del recurso creado
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /usuarios/{identificacion}/rol:
+    put:
+      tags:
+      - Usuarios
+      summary: Asignar un rol
+      description: 'Cambia el rol de un usuario (7.2).
+
+
+        Roles: ADMINISTRADOR.'
+      operationId: asignarRol
+      parameters:
+      - name: identificacion
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignarRolRequest'
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /usuarios/{identificacion}:
+    delete:
+      tags:
+      - Usuarios
+      summary: Eliminar un usuario (lógico)
+      description: 'El usuario queda inactivo. No se permite si es titular de reservas PENDIENTE, CONFIRMADA o EN_CURSO; sus
+        reservas históricas se conservan (7.2).
+
+
+        Roles: ADMINISTRADOR.'
+      operationId: eliminarUsuario
+      parameters:
+      - name: identificacion
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Usuario desactivado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /alojamiento:
+    get:
+      tags:
+      - Alojamiento
+      summary: Consultar el alojamiento
+      description: Datos, ubicación (mapa), horarios, normas y servicios adicionales (7.3).
+      operationId: consultarAlojamiento
+      security: []
+      responses:
+        '200':
+          description: Alojamiento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlojamientoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - Alojamiento
+      summary: Actualizar el alojamiento
+      description: 'Datos, normas y catálogo de servicios adicionales con su cargo (7.3, L-17). Los horarios y parámetros
+        de la sección 6 son configuración externa.
+
+
+        Roles: ADMINISTRADOR.'
+      operationId: actualizarAlojamiento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarAlojamientoRequest'
+      responses:
+        '200':
+          description: Alojamiento actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlojamientoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /apartamentos:
     post:
       tags:
@@ -129,12 +428,24 @@ paths:
       tags:
       - Apartamentos
       summary: Listar apartamentos
-      description: 'Inventario completo (activos y retirados), paginado de 10 en 10 y ordenado por identificación.
+      description: 'Paginado de 10 en 10 y ordenado por identificación. Ignora los retirados salvo incluirRetirados=true (7.3);
+        el personal de servicio filtra por estado operativo, p. ej. PENDIENTE_PREPARACION (7.1).
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+        Roles: ADMINISTRADOR, RECEPCIONISTA, PERSONAL_SERVICIO.'
       operationId: listarApartamentos
       parameters:
+      - name: estadoOperativo
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/EstadoOperativo'
+      - name: incluirRetirados
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
       - $ref: '#/components/parameters/PageParam'
       - $ref: '#/components/parameters/SizeParam'
       responses:
@@ -155,8 +466,10 @@ paths:
       tags:
       - Disponibilidad
       summary: Buscar apartamentos disponibles
-      description: Apartamentos activos que admiten al grupo (RN-02), sin reservas activas solapadas (RN-01), sin bloqueos
-        vigentes (RN-07) y respetando el tiempo de preparación (RN-20). Filtro opcional por dormitorios.
+      description: 'Aplica las validaciones de 7.5 en orden (entrada no anterior a hoy, activo con tarifas completas, capacidad,
+        sin reservas ni bloqueos solapados, tiempo de preparación). Cada tarjeta trae el valor estimado de la estancia calculado
+        con las fechas de nacimiento del grupo (sin ellas se estima con adultos). Filtros: capacidad, dormitorios, rango de
+        precio sobre el valor estimado y características.'
       operationId: consultarApartamentosDisponibles
       security: []
       parameters:
@@ -179,12 +492,50 @@ paths:
           type: integer
           minimum: 1
         description: Total del grupo, facturables o no
+      - name: fechasNacimiento
+        in: query
+        required: false
+        explode: true
+        description: Una por ocupante, en el mismo número que totalOcupantes
+        schema:
+          type: array
+          items:
+            type: string
+            format: date
+          maxItems: 50
+      - name: capacidadMinima
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
       - name: dormitoriosMinimos
         in: query
         required: false
         schema:
           type: integer
           minimum: 1
+      - name: precioMinimo
+        in: query
+        required: false
+        schema:
+          type: number
+          minimum: 0
+      - name: precioMaximo
+        in: query
+        required: false
+        schema:
+          type: number
+          minimum: 0
+      - name: caracteristicas
+        in: query
+        required: false
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+          maxItems: 10
       - $ref: '#/components/parameters/PageParam'
       - $ref: '#/components/parameters/SizeParam'
       responses:
@@ -203,11 +554,9 @@ paths:
       tags:
       - Apartamentos
       summary: Consultar un apartamento
-      description: 'Detalle del apartamento con sus tarifas.
-
-
-        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+      description: 'Detalle público: descripción, características y tarifas vigentes (7.1).'
       operationId: consultarApartamento
+      security: []
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
       responses:
@@ -219,22 +568,17 @@ paths:
                 $ref: '#/components/schemas/ApartamentoResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /apartamentos/{identificacion}/capacidad:
     put:
       tags:
       - Apartamentos
-      summary: Cambiar la capacidad
-      description: 'No afecta las reservas ya creadas (7.3).
+      summary: Actualizar los datos de un apartamento
+      description: 'Nombre, descripción, dormitorios y características (7.3).
 
 
         Roles: ADMINISTRADOR.'
-      operationId: cambiarCapacidad
+      operationId: actualizarApartamento
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
       requestBody:
@@ -242,7 +586,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CambiarCapacidadRequest'
+              $ref: '#/components/schemas/ActualizarApartamentoRequest'
       responses:
         '200':
           description: Apartamento actualizado
@@ -260,12 +604,180 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /apartamentos/{identificacion}/calendario:
+    get:
+      tags:
+      - Disponibilidad
+      summary: Calendario de disponibilidad y ocupación
+      description: 'Estado de cada noche en [desde, hasta): DISPONIBLE, RESERVADA, BLOQUEADA, EN_PREPARACION o NO_VENDIBLE
+        (7.5). Solo el personal del alojamiento ve el código de la reserva. Máximo 366 noches.'
+      operationId: consultarCalendario
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      - name: desde
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: hasta
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: Noches del calendario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NocheCalendarioResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /apartamentos/{identificacion}/tarifas/historial:
+    get:
+      tags:
+      - Apartamentos
+      summary: Histórico de tarifas
+      description: 'Cada cambio de tarifa, del más reciente al más antiguo (7.4).
+
+
+        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+      operationId: historialTarifas
+      parameters:
+      - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      responses:
+        '200':
+          description: Histórico
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RegistroTarifaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /apartamentos/{identificacion}/novedades:
+    post:
+      tags:
+      - Apartamentos
+      summary: Registrar una novedad
+      description: 'Con fecha, autor (tomado del token), descripción y gravedad (7.6).
+
+
+        Roles: ADMINISTRADOR, RECEPCIONISTA, PERSONAL_SERVICIO.'
+      operationId: registrarNovedadApartamento
+      parameters:
+      - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarNovedadApartamentoRequest'
+      responses:
+        '201':
+          description: Novedad registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NovedadApartamentoResponse'
+          headers:
+            Location:
+              description: URL del recurso creado
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags:
+      - Apartamentos
+      summary: Historial de novedades
+      description: 'De la más reciente a la más antigua (7.6).
+
+
+        Roles: ADMINISTRADOR, RECEPCIONISTA, PERSONAL_SERVICIO.'
+      operationId: listarNovedadesApartamento
+      parameters:
+      - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      responses:
+        '200':
+          description: Novedades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NovedadApartamentoResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /apartamentos/{identificacion}/capacidad:
+    put:
+      tags:
+      - Apartamentos
+      summary: Cambiar la capacidad
+      description: 'No afecta las reservas ya creadas aunque queden por encima de la nueva capacidad: se advierte y se listan
+        (7.3).
+
+
+        Roles: ADMINISTRADOR.'
+      operationId: cambiarCapacidad
+      parameters:
+      - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarCapacidadRequest'
+      responses:
+        '200':
+          description: Capacidad cambiada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CambioCapacidadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /apartamentos/{identificacion}/tarifas:
     put:
       tags:
       - Apartamentos
       summary: Actualizar la tarifa de una temporada
-      description: 'Reemplaza el valor por ocupante facturable y noche; no altera el valor congelado de las reservas (RN-22).
+      description: 'Reemplaza el valor por ocupante facturable y noche y lo agrega al histórico; no altera el valor congelado
+        de las reservas (RN-22).
 
 
         Roles: ADMINISTRADOR.'
@@ -361,7 +873,7 @@ paths:
       description: 'PENDIENTE_PREPARACION → EN_PREPARACION.
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+        Roles: ADMINISTRADOR, RECEPCIONISTA, PERSONAL_SERVICIO.'
       operationId: iniciarPreparacion
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
@@ -390,7 +902,7 @@ paths:
       description: 'EN_PREPARACION → PREPARADO (RN-11).
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+        Roles: ADMINISTRADOR, RECEPCIONISTA, PERSONAL_SERVICIO.'
       operationId: marcarPreparado
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
@@ -416,10 +928,10 @@ paths:
       tags:
       - Apartamentos
       summary: Declarar fuera de servicio
-      description: 'No se permite desde OCUPADO.
+      description: 'No se permite desde OCUPADO; decisión administrativa (7.6).
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+        Roles: ADMINISTRADOR.'
       operationId: declararFueraDeServicio
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
@@ -448,7 +960,7 @@ paths:
       description: 'FUERA_DE_SERVICIO → PENDIENTE_PREPARACION.
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+        Roles: ADMINISTRADOR.'
       operationId: reincorporarApartamento
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
@@ -764,7 +1276,8 @@ paths:
       tags:
       - Reservas
       summary: Listar reservas
-      description: 'Filtros opcionales, de la más reciente a la más antigua, 10 por página. Un huésped solo obtiene las suyas.
+      description: 'Filtros por fechas, estado, apartamento, canal y titular (7.5), de la más reciente a la más antigua, 10
+        por página. Un huésped solo obtiene las suyas.
 
 
         Roles: ADMINISTRADOR, RECEPCIONISTA, HUESPED (solo sobre sus reservas).'
@@ -781,6 +1294,18 @@ paths:
         schema:
           type: string
           pattern: ^APT-[0-9]{3}$
+      - name: canal
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/CanalOrigen'
+      - name: titular
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 30
+        description: Documento del titular
       - name: entradaDesde
         in: query
         required: false
@@ -806,6 +1331,36 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /reservas/movimientos-del-dia:
+    get:
+      tags:
+      - Reservas
+      summary: Llegadas y salidas previstas
+      description: 'Reservas PENDIENTE o CONFIRMADA que entran ese día y EN_CURSO que salen (7.6). Sin fecha, hoy.
+
+
+        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+      operationId: movimientosDelDia
+      parameters:
+      - name: fecha
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: Movimientos del día
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovimientosDelDiaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reservas/{codigo}:
     get:
       tags:
@@ -1004,17 +1559,18 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /reservas/{codigo}/estancia:
+  /reservas/{codigo}/modificacion:
     put:
       tags:
       - Reservas
-      summary: Modificar las fechas de la estancia
-      description: 'Revalida disponibilidad, capacidad y estancia mínima, recalcula el valor y registra el ajuste en el folio;
-        la política congelada no cambia (RN-14, RN-22).
+      summary: Modificar una reserva no iniciada
+      description: 'Fechas, acompañantes o apartamento asignado, desde PENDIENTE o CONFIRMADA. Repite las seis validaciones
+        de creación, recalcula el valor con las tarifas vigentes y registra la diferencia como ajuste en el folio; la política
+        congelada no cambia (7.5, RN-14, RN-22).
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA, HUESPED (solo sobre sus reservas).'
-      operationId: modificarEstancia
+        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+      operationId: modificarReserva
       parameters:
       - $ref: '#/components/parameters/CodigoReservaParam'
       requestBody:
@@ -1022,7 +1578,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModificarEstanciaRequest'
+              $ref: '#/components/schemas/ModificarReservaRequest'
       responses:
         '200':
           description: Reserva actualizada
@@ -1278,12 +1834,53 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /folios/{codigoReserva}/servicios:
+    post:
+      tags:
+      - Folios
+      summary: Cargar un servicio adicional
+      description: 'El valor sale del catálogo del alojamiento y de la cantidad (L-17); el servicio debe generar cargo.
+
+
+        Roles: ADMINISTRADOR, RECEPCIONISTA.'
+      operationId: registrarServicioFolio
+      parameters:
+      - $ref: '#/components/parameters/CodigoReservaFolioParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarServicioFolioRequest'
+      responses:
+        '201':
+          description: Cargo registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CargoResponse'
+          headers:
+            Location:
+              description: URL del recurso creado
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /folios/{codigoReserva}/cerrar:
     put:
       tags:
       - Folios
       summary: Cerrar el folio
-      description: 'Con saldo distinto de cero exige una autorización registrada (RN-17).
+      description: 'Con saldo cero lo cierra la recepción. Con saldo distinto de cero solo un administrador, indicando el
+        motivo: la autorización queda registrada con autor, motivo y momento (7.7, RN-17); un recepcionista recibe 403.
 
 
         Roles: ADMINISTRADOR, RECEPCIONISTA.'
@@ -1415,6 +2012,7 @@ components:
       enum:
       - ADMINISTRADOR
       - RECEPCIONISTA
+      - PERSONAL_SERVICIO
       - HUESPED
     RegistroHuespedRequest:
       type: object
@@ -1422,7 +2020,9 @@ components:
       - correo
       - contrasena
       - nombreCompleto
+      - telefono
       - documento
+      - fechaNacimiento
       properties:
         correo:
           type: string
@@ -1433,15 +2033,283 @@ components:
           type: string
           maxLength: 72
           minLength: 8
+          pattern: ^(?=.*[A-Z])(?=.*\d).{8,72}$
           example: Clave12345*
         nombreCompleto:
           type: string
           maxLength: 150
           example: Laura Ríos
+        telefono:
+          type: string
+          maxLength: 30
+          example: '3007654321'
         documento:
           type: string
           maxLength: 30
           example: '1094999888'
+        fechaNacimiento:
+          type: string
+          format: date
+          example: '1996-02-20'
+    CrearUsuarioRequest:
+      type: object
+      required:
+      - correo
+      - contrasena
+      - nombreCompleto
+      - telefono
+      - documento
+      - fechaNacimiento
+      - rol
+      properties:
+        correo:
+          type: string
+          maxLength: 120
+          format: email
+          example: servicio2@sieteraices.co
+        contrasena:
+          type: string
+          maxLength: 72
+          minLength: 8
+          pattern: ^(?=.*[A-Z])(?=.*\d).{8,72}$
+          example: Servicio123*
+        nombreCompleto:
+          type: string
+          maxLength: 150
+          example: Marta Ruiz
+        telefono:
+          type: string
+          maxLength: 30
+          example: '3109876543'
+        documento:
+          type: string
+          maxLength: 30
+          example: '1000000009'
+        fechaNacimiento:
+          type: string
+          format: date
+          example: '1990-01-10'
+        rol:
+          $ref: '#/components/schemas/Rol'
+    AsignarRolRequest:
+      type: object
+      required:
+      - rol
+      properties:
+        rol:
+          $ref: '#/components/schemas/Rol'
+    ActualizarPerfilRequest:
+      type: object
+      required:
+      - nombreCompleto
+      - telefono
+      properties:
+        nombreCompleto:
+          type: string
+          maxLength: 150
+        telefono:
+          type: string
+          maxLength: 30
+    CambiarContrasenaRequest:
+      type: object
+      required:
+      - contrasenaActual
+      - contrasenaNueva
+      properties:
+        contrasenaActual:
+          type: string
+        contrasenaNueva:
+          type: string
+          maxLength: 72
+          minLength: 8
+          pattern: ^(?=.*[A-Z])(?=.*\d).{8,72}$
+    SolicitarRecuperacionRequest:
+      type: object
+      required:
+      - correo
+      properties:
+        correo:
+          type: string
+          format: email
+    RestablecerContrasenaRequest:
+      type: object
+      required:
+      - correo
+      - codigo
+      - contrasenaNueva
+      properties:
+        correo:
+          type: string
+          format: email
+        codigo:
+          type: string
+          pattern: ^[0-9]{6}$
+        contrasenaNueva:
+          type: string
+          maxLength: 72
+          minLength: 8
+          pattern: ^(?=.*[A-Z])(?=.*\d).{8,72}$
+    PaginaUsuarios:
+      type: object
+      required:
+      - contenido
+      - pagina
+      - tamanio
+      - totalElementos
+      - totalPaginas
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioResponse'
+        pagina:
+          type: integer
+        tamanio:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+    UnidadCobro:
+      type: string
+      enum:
+      - POR_SOLICITUD
+      - POR_PERSONA
+      - POR_NOCHE
+    ServicioAdicionalRequest:
+      type: object
+      required:
+      - codigo
+      - nombre
+      - generaCargo
+      - valor
+      - unidad
+      properties:
+        codigo:
+          type: string
+          maxLength: 30
+          pattern: ^[A-Z][A-Z0-9_]{1,29}$
+          example: LAVANDERIA
+        nombre:
+          type: string
+          maxLength: 80
+        generaCargo:
+          type: boolean
+        valor:
+          type: integer
+          format: int64
+          description: Pesos colombianos sin decimales
+          minimum: 0
+        unidad:
+          $ref: '#/components/schemas/UnidadCobro'
+    ServicioAdicionalResponse:
+      type: object
+      required:
+      - codigo
+      - nombre
+      - generaCargo
+      - valor
+      - unidad
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+        generaCargo:
+          type: boolean
+        valor:
+          type: integer
+          format: int64
+          description: Pesos colombianos sin decimales
+        unidad:
+          $ref: '#/components/schemas/UnidadCobro'
+    ActualizarAlojamientoRequest:
+      type: object
+      required:
+      - nombre
+      - descripcion
+      - ciudad
+      - direccion
+      - latitud
+      - longitud
+      - normas
+      - servicios
+      properties:
+        nombre:
+          type: string
+          maxLength: 120
+        descripcion:
+          type: string
+          maxLength: 1000
+        ciudad:
+          type: string
+          maxLength: 80
+        direccion:
+          type: string
+          maxLength: 150
+        latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        normas:
+          type: array
+          items:
+            type: string
+            maxLength: 300
+          maxItems: 30
+        servicios:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServicioAdicionalRequest'
+          minItems: 1
+          maxItems: 30
+    AlojamientoResponse:
+      type: object
+      required:
+      - nombre
+      - descripcion
+      - ciudad
+      - direccion
+      - latitud
+      - longitud
+      - horaEntrada
+      - horaSalida
+      - normas
+      - servicios
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        ciudad:
+          type: string
+        direccion:
+          type: string
+        latitud:
+          type: number
+        longitud:
+          type: number
+        horaEntrada:
+          type: string
+          format: time
+          example: '15:30:00'
+        horaSalida:
+          type: string
+          format: time
+          example: '15:30:00'
+        normas:
+          type: array
+          items:
+            type: string
+        servicios:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServicioAdicionalResponse'
     InicioSesionRequest:
       type: object
       required:
@@ -1479,19 +2347,33 @@ components:
     UsuarioResponse:
       type: object
       required:
+      - identificacion
       - correo
       - nombreCompleto
+      - telefono
       - documento
+      - fechaNacimiento
       - rol
+      - activo
       properties:
+        identificacion:
+          type: string
+          format: uuid
         correo:
           type: string
         nombreCompleto:
           type: string
+        telefono:
+          type: string
         documento:
           type: string
+        fechaNacimiento:
+          type: string
+          format: date
         rol:
           $ref: '#/components/schemas/Rol'
+        activo:
+          type: boolean
     TarifaRequest:
       type: object
       required:
@@ -1523,8 +2405,10 @@ components:
       required:
       - identificacion
       - nombre
+      - descripcion
       - dormitorios
       - capacidad
+      - caracteristicas
       - tarifas
       properties:
         identificacion:
@@ -1535,17 +2419,143 @@ components:
           type: string
           maxLength: 80
           example: Mirador
+        descripcion:
+          type: string
+          maxLength: 1000
+          example: Vista a la cordillera
         dormitorios:
           type: integer
           minimum: 1
         capacidad:
           type: integer
           minimum: 1
+        caracteristicas:
+          type: array
+          items:
+            type: string
+            maxLength: 80
+          maxItems: 20
+          example:
+          - Wifi
+          - Balcón
         tarifas:
           type: array
           items:
             $ref: '#/components/schemas/TarifaRequest'
           minItems: 1
+    ActualizarApartamentoRequest:
+      type: object
+      required:
+      - nombre
+      - descripcion
+      - dormitorios
+      - caracteristicas
+      properties:
+        nombre:
+          type: string
+          maxLength: 80
+        descripcion:
+          type: string
+          maxLength: 1000
+        dormitorios:
+          type: integer
+          minimum: 1
+        caracteristicas:
+          type: array
+          items:
+            type: string
+            maxLength: 80
+          maxItems: 20
+    RegistroTarifaResponse:
+      type: object
+      required:
+      - temporada
+      - valorPorOcupanteNoche
+      - vigenteDesde
+      properties:
+        temporada:
+          $ref: '#/components/schemas/TipoTemporada'
+        valorPorOcupanteNoche:
+          type: integer
+          format: int64
+          description: Pesos colombianos sin decimales
+        vigenteDesde:
+          type: string
+          format: date-time
+    GravedadNovedad:
+      type: string
+      enum:
+      - LEVE
+      - MODERADA
+      - GRAVE
+    RegistrarNovedadApartamentoRequest:
+      type: object
+      required:
+      - descripcion
+      - gravedad
+      properties:
+        descripcion:
+          type: string
+          maxLength: 500
+          example: Bombillo fundido en la cocina
+        gravedad:
+          $ref: '#/components/schemas/GravedadNovedad'
+    NovedadApartamentoResponse:
+      type: object
+      required:
+      - fecha
+      - autor
+      - descripcion
+      - gravedad
+      properties:
+        fecha:
+          type: string
+          format: date-time
+        autor:
+          type: string
+        descripcion:
+          type: string
+        gravedad:
+          $ref: '#/components/schemas/GravedadNovedad'
+    EstadoNoche:
+      type: string
+      enum:
+      - DISPONIBLE
+      - RESERVADA
+      - BLOQUEADA
+      - EN_PREPARACION
+      - NO_VENDIBLE
+    NocheCalendarioResponse:
+      type: object
+      required:
+      - noche
+      - estado
+      properties:
+        noche:
+          type: string
+          format: date
+        estado:
+          $ref: '#/components/schemas/EstadoNoche'
+        reserva:
+          type:
+          - string
+          - 'null'
+    CambioCapacidadResponse:
+      type: object
+      required:
+      - apartamento
+      - reservasExcedidas
+      properties:
+        apartamento:
+          $ref: '#/components/schemas/ApartamentoResponse'
+        advertencia:
+          type:
+          - string
+          - 'null'
+        reservasExcedidas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservaResumenResponse'
     CambiarCapacidadRequest:
       type: object
       required:
@@ -1559,8 +2569,10 @@ components:
       required:
       - identificacion
       - nombre
+      - descripcion
       - dormitorios
       - capacidad
+      - caracteristicas
       - estadoOperativo
       - activo
       - tarifas
@@ -1569,10 +2581,16 @@ components:
           type: string
         nombre:
           type: string
+        descripcion:
+          type: string
         dormitorios:
           type: integer
         capacidad:
           type: integer
+        caracteristicas:
+          type: array
+          items:
+            type: string
         estadoOperativo:
           $ref: '#/components/schemas/EstadoOperativo'
         activo:
@@ -1586,17 +2604,33 @@ components:
       required:
       - identificacion
       - nombre
+      - descripcion
       - dormitorios
       - capacidadMaxima
+      - caracteristicas
+      - noches
+      - valorEstimado
       properties:
         identificacion:
           type: string
         nombre:
           type: string
+        descripcion:
+          type: string
         dormitorios:
           type: integer
         capacidadMaxima:
           type: integer
+        caracteristicas:
+          type: array
+          items:
+            type: string
+        noches:
+          type: integer
+        valorEstimado:
+          type: integer
+          format: int64
+          description: Valor total estimado de la estancia para el grupo
     PaginaApartamentos:
       type: object
       required:
@@ -2007,18 +3041,51 @@ components:
         novedad:
           type: string
           maxLength: 300
-    ModificarEstanciaRequest:
+    ModificarReservaRequest:
       type: object
-      required:
-      - fechaEntrada
-      - fechaSalida
+      description: Un campo ausente conserva su valor. Para cambiar fechas se envían ambas.
       properties:
+        identificacionApartamento:
+          type:
+          - string
+          - 'null'
+          pattern: ^APT-[0-9]{3}$
         fechaEntrada:
-          type: string
+          type:
+          - string
+          - 'null'
           format: date
         fechaSalida:
+          type:
+          - string
+          - 'null'
+          format: date
+        acompanantes:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/OcupanteRequest'
+          maxItems: 30
+          description: Nuevo grupo además del titular; ausente conserva el actual
+    MovimientosDelDiaResponse:
+      type: object
+      required:
+      - dia
+      - llegadas
+      - salidas
+      properties:
+        dia:
           type: string
           format: date
+        llegadas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservaResumenResponse'
+        salidas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservaResumenResponse'
     RegistrarVehiculoRequest:
       type: object
       required:
@@ -2267,9 +3334,9 @@ components:
         cerrado:
           type: boolean
         autorizacionCierre:
-          type:
-          - string
-          - 'null'
+          oneOf:
+          - $ref: '#/components/schemas/AutorizacionCierreResponse'
+          - type: 'null'
         cargos:
           type: array
           items:
@@ -2311,15 +3378,43 @@ components:
           description: Pesos colombianos sin decimales
           minimum: 1
           example: 25000
+    RegistrarServicioFolioRequest:
+      type: object
+      required:
+      - codigoServicio
+      - cantidad
+      properties:
+        codigoServicio:
+          type: string
+          example: DESAYUNO
+        cantidad:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 2
+    AutorizacionCierreResponse:
+      type: object
+      required:
+      - autor
+      - motivo
+      - momento
+      properties:
+        autor:
+          type: string
+        motivo:
+          type: string
+        momento:
+          type: string
+          format: date-time
     CerrarFolioRequest:
       type: object
       properties:
-        autorizacion:
+        motivo:
           type:
           - string
           - 'null'
           maxLength: 200
-          description: Obligatoria si el saldo es distinto de cero (RN-17)
+          description: Motivo de la autorización; obligatorio si el saldo es distinto de cero (solo administrador, RN-17)
     ErrorResponse:
       type: object
       description: Formato único de error. Nunca incluye trazas técnicas.
@@ -2336,7 +3431,7 @@ components:
         codigo:
           type: string
           description: NO_AUTENTICADO, ACCESO_DENEGADO, SOLICITUD_INVALIDA, RECURSO_NO_ENCONTRADO, REGLA_NEGOCIO_VIOLADA,
-            CREDENCIALES_INVALIDAS, METODO_NO_PERMITIDO o ERROR_INTERNO
+            CONFLICTO_USUARIO, CREDENCIALES_INVALIDAS, METODO_NO_PERMITIDO o ERROR_INTERNO
           example: REGLA_NEGOCIO_VIOLADA
         mensaje:
           type: string
@@ -2374,7 +3469,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
     Conflict:
-      description: Regla del negocio violada
+      description: Regla del negocio violada o correo/documento ya registrados
       content:
         application/json:
           schema:

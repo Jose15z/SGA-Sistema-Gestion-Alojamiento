@@ -3,8 +3,11 @@ package co.edu.uniquindio.sga.domain.entity;
 import co.edu.uniquindio.sga.EscenarioReservas;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.valueobject.Dinero;
+import co.edu.uniquindio.sga.domain.valueobject.GravedadNovedad;
+import co.edu.uniquindio.sga.domain.valueobject.NovedadApartamento;
 import co.edu.uniquindio.sga.domain.valueobject.Tarifa;
 import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
+import java.time.LocalDateTime;
 import java.util.List;
 import co.edu.uniquindio.sga.domain.valueobject.Capacidad;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoOperativo;
@@ -335,7 +338,8 @@ class ApartamentoTest {
                 new Tarifa(id, TipoTemporada.ALTA, Dinero.de(80_000)));
 
         assertThrows(ReglaDominioException.class,
-                () -> new Apartamento(id, "Sin especial", 1, new Capacidad(2), incompletas));
+                () -> new Apartamento(id, "Sin especial", "", 1, new Capacidad(2), List.of(), incompletas,
+                        LocalDateTime.of(2026, 1, 1, 8, 0)));
     }
 
     @Test
@@ -347,17 +351,21 @@ class ApartamentoTest {
                 new Tarifa(otro, TipoTemporada.ESPECIAL, Dinero.de(90_000)));
 
         assertThrows(ReglaDominioException.class,
-                () -> new Apartamento(id, "Mezclado", 1, new Capacidad(2), tarifas));
+                () -> new Apartamento(id, "Mezclado", "", 1, new Capacidad(2), List.of(), tarifas,
+                        LocalDateTime.of(2026, 1, 1, 8, 0)));
     }
 
     @Test
     void actualizarTarifaReemplazaElValorDeLaTemporada() {
         Apartamento apartamento = apartamento();
 
-        apartamento.actualizarTarifa(TipoTemporada.ALTA, Dinero.de(95_000));
+        int registrosPrevios = apartamento.getHistorialTarifas().size();
+        apartamento.actualizarTarifa(TipoTemporada.ALTA, Dinero.de(95_000), LocalDateTime.of(2030, 6, 1, 9, 0));
 
         assertEquals(Dinero.de(95_000), apartamento.tarifaPara(TipoTemporada.ALTA).valorPorOcupanteNoche());
         assertTrue(apartamento.tieneTarifasCompletas());
+        assertEquals(registrosPrevios + 1, apartamento.getHistorialTarifas().size());
+        assertEquals(Dinero.de(95_000), apartamento.getHistorialTarifas().getFirst().valor());
     }
 
     @Test
@@ -388,5 +396,31 @@ class ApartamentoTest {
         apartamento.marcarOcupado();
         apartamento.liberar();
         return apartamento;
+    }
+
+    @Test
+    void actualizarDatosConservaCaracteristicasSinVaciosNiRepetidos() {
+        Apartamento apartamento = apartamento();
+
+        apartamento.actualizarDatos("Orquídea", "Vista al jardín", 2, List.of("Wifi", " Balcón ", "Wifi"));
+
+        assertEquals(List.of("Wifi", "Balcón"), apartamento.getCaracteristicas());
+        assertTrue(apartamento.tieneCaracteristicas(List.of("balcón")));
+        assertFalse(apartamento.tieneCaracteristicas(List.of("Jacuzzi")));
+        assertThrows(ReglaDominioException.class,
+                () -> apartamento.actualizarDatos("Orquídea", "", 2, List.of(" ")));
+    }
+
+    @Test
+    void lasNovedadesSeListanDeLaMasRecienteALaMasAntigua() {
+        Apartamento apartamento = apartamento();
+        apartamento.registrarNovedad(new NovedadApartamento(LocalDateTime.of(2026, 5, 1, 10, 0), "servicio",
+                "Bombillo fundido", GravedadNovedad.LEVE));
+        apartamento.registrarNovedad(new NovedadApartamento(LocalDateTime.of(2026, 5, 2, 10, 0), "servicio",
+                "Fuga en la ducha", GravedadNovedad.GRAVE));
+
+        assertEquals(GravedadNovedad.GRAVE, apartamento.getNovedades().getFirst().gravedad());
+        assertThrows(ReglaDominioException.class, () -> new NovedadApartamento(LocalDateTime.now(), " ",
+                "Sin autor", GravedadNovedad.LEVE));
     }
 }

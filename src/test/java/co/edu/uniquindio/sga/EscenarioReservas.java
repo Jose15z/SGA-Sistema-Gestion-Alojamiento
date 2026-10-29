@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga;
 
+import co.edu.uniquindio.sga.application.seguridad.Rol;
 import co.edu.uniquindio.sga.application.seguridad.Solicitante;
 import co.edu.uniquindio.sga.application.usecase.*;
 import co.edu.uniquindio.sga.domain.entity.*;
@@ -33,7 +34,8 @@ public final class EscenarioReservas {
         IdentificacionApartamento identificacion = new IdentificacionApartamento(id);
         List<Tarifa> tarifas = Arrays.stream(TipoTemporada.values())
                 .map(t -> new Tarifa(identificacion, t, Dinero.de(100_000))).toList();
-        return new Apartamento(identificacion, nombre, dormitorios, new Capacidad(capacidad), tarifas);
+        return new Apartamento(identificacion, nombre, "Apartamento " + nombre, dormitorios, new Capacidad(capacidad),
+                List.of("Cocina equipada", "Balcón"), tarifas, ReservasDePrueba.CREACION);
     }
 
     public Clock reloj(LocalDateTime momento) {

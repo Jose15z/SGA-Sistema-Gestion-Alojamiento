@@ -23,6 +23,14 @@ public interface ReservaJpaDataRepository extends JpaRepository<ReservaEntity, L
 
     List<ReservaEntity> findByApartamentoIdAndEstadoIn(String apartamentoId, Collection<EstadoReserva> estados);
 
+    List<ReservaEntity> findByEstanciaFechaEntradaAndEstadoInOrderByCodigo(LocalDate fechaEntrada,
+                                                                         Collection<EstadoReserva> estados);
+
+    List<ReservaEntity> findByEstanciaFechaSalidaAndEstadoInOrderByCodigo(LocalDate fechaSalida,
+                                                                        Collection<EstadoReserva> estados);
+
+    boolean existsByTitularDocumentoAndEstadoIn(String titularDocumento, Collection<EstadoReserva> estados);
+
     boolean existsByCanalOrigenAndIdentificadorExterno(CanalOrigen canal, String identificadorExterno);
 
     /** Prefiltro por fechas; el dominio vuelve a decidir el solapamiento con Estancia.seSolapaCon. */
@@ -41,12 +49,14 @@ public interface ReservaJpaDataRepository extends JpaRepository<ReservaEntity, L
             select r from ReservaEntity r
             where (:estado is null or r.estado = :estado)
               and (:apartamento is null or r.apartamentoId = :apartamento)
+              and (:canal is null or r.canalOrigen = :canal)
               and (:titular is null or r.titularDocumento = :titular)
               and (:desde is null or r.estancia.fechaEntrada >= :desde)
               and (:hasta is null or r.estancia.fechaEntrada <= :hasta)
             """)
     Page<ReservaEntity> buscar(@Param("estado") EstadoReserva estado,
                                @Param("apartamento") String apartamento,
+                               @Param("canal") CanalOrigen canal,
                                @Param("titular") String titular,
                                @Param("desde") LocalDate desde,
                                @Param("hasta") LocalDate hasta,

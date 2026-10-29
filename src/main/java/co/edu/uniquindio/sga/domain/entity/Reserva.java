@@ -57,7 +57,7 @@ import java.util.Objects;
 public class Reserva {
 
     private final CodigoReserva codigo;
-    private final IdentificacionApartamento apartamento;
+    private IdentificacionApartamento apartamento;
     private final CanalOrigen canalOrigen;
     private final IdentificadorExterno identificadorExterno;
     private final FechaCreacion fechaCreacion;
@@ -551,27 +551,68 @@ public class Reserva {
         historial = eventos;
     }
 
-    /** RN-14/22: modifica una reserva no iniciada con cotización validada y conserva la política. */
+    /** RN-14/22: cambia solo las fechas; equivale a {@link #modificar} con el mismo apartamento y grupo. */
     public Dinero modificarEstancia(
             Estancia nuevaEstancia, ValorCongelado nuevoValor, UmbralEdadFacturable umbral,
             String autor, LocalDateTime ahora) {
+        return modificar(apartamento, nuevaEstancia, ocupantes, nuevoValor, umbral, autor, ahora);
+    }
+
+    /**
+     * 7.5: cambia fechas, ocupantes o apartamento de una reserva PENDIENTE o CONFIRMADA
+     * que no ha iniciado. Las seis validaciones de creación las repite antes
+     * {@code ModificacionReservaService}; aquí se protegen las invariantes propias:
+     * el titular sigue en el grupo y es facturable, el valor corresponde a la nueva
+     * estancia y al grupo, y la política congelada no cambia.
+     *
+     * @return diferencia entre el nuevo valor y el anterior (ajuste del folio)
+     */
+    public Dinero modificar(
+            IdentificacionApartamento nuevoApartamento, Estancia nuevaEstancia, List<Ocupante> nuevosOcupantes,
+            ValorCongelado nuevoValor, UmbralEdadFacturable umbral, String autor, LocalDateTime ahora) {
         if (estado != EstadoReserva.PENDIENTE && estado != EstadoReserva.CONFIRMADA) {
             throw new ReglaDominioException("Solo se modifica una reserva pendiente o confirmada");
         }
-        if (nuevaEstancia == null || nuevoValor == null || umbral == null || ahora == null
-                || nuevaEstancia.fechaEntrada().isBefore(ahora.toLocalDate())
-                || !nuevoValor.correspondeA(nuevaEstancia)) {
+        if (nuevoApartamento == null || nuevaEstancia == null || nuevoValor == null || umbral == null
+                || ahora == null || nuevosOcupantes == null || nuevosOcupantes.isEmpty()
+                || nuevosOcupantes.stream().anyMatch(Objects::isNull)) {
+            throw new ReglaDominioException("La modificación requiere apartamento, estancia, grupo y valor");
+        }
+        if (estancia.fechaEntrada().isBefore(ahora.toLocalDate())) {
+            throw new ReglaDominioException("La reserva ya debía haber iniciado: no puede modificarse");
+        }
+        if (nuevaEstancia.fechaEntrada().isBefore(ahora.toLocalDate()) || !nuevoValor.correspondeA(nuevaEstancia)) {
             throw new ReglaDominioException("La modificación requiere estancia futura y desglose correspondiente");
         }
-        long facturables = ocupantes.stream().filter(o -> o.esFacturableEn(nuevaEstancia, umbral)).count();
+        List<Ocupante> grupo = List.copyOf(nuevosOcupantes);
+        if (grupo.stream().distinct().count() != grupo.size()) {
+            throw new ReglaDominioException("No se puede repetir un ocupante en la reserva");
+        }
+        if (!grupo.contains(titular)) {
+            throw new ReglaDominioException("El titular debe seguir siendo uno de los ocupantes");
+        }
+        long facturables = grupo.stream().filter(o -> o.esFacturableEn(nuevaEstancia, umbral)).count();
         if (!titular.esFacturableEn(nuevaEstancia, umbral)
                 || nuevoValor.detalle().stream().anyMatch(c -> c.ocupantesFacturables() != facturables)) {
             throw new ReglaDominioException("La nueva cotización no corresponde al grupo o su titular");
         }
         Dinero ajuste = nuevoValor.total().menos(valor.total());
+        StringBuilder cambios = new StringBuilder();
+        if (!nuevoApartamento.equals(apartamento)) {
+            cambios.append("Apartamento: ").append(apartamento.valor()).append(" -> ")
+                    .append(nuevoApartamento.valor()).append(" | ");
+        }
+        if (!nuevaEstancia.equals(estancia)) {
+            cambios.append("Nueva estancia: ").append(nuevaEstancia).append(" | ");
+        }
+        if (!grupo.equals(ocupantes)) {
+            cambios.append("Ocupantes: ").append(grupo.size()).append(" | ");
+        }
         List<EventoReserva> eventos = historialConEvento("MODIFICACION", autor, estado,
-                "Nueva estancia: " + nuevaEstancia + " | ajuste: " + ajuste.valor(), ahora);
+                cambios + "ajuste: " + ajuste.valor(), ahora);
+        apartamento = nuevoApartamento;
         estancia = nuevaEstancia;
+        ocupantes = grupo;
         valor = nuevoValor;
         historial = eventos;
         return ajuste;

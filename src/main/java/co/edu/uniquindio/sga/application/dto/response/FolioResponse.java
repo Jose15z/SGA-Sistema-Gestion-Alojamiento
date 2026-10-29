@@ -8,7 +8,7 @@ public record FolioResponse(
         Long saldo,
         Long totalPagado,
         boolean cerrado,
-        String autorizacionCierre,
+        AutorizacionCierreResponse autorizacionCierre,
         List<CargoResponse> cargos,
         List<PagoResponse> pagos
 ) {

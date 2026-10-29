@@ -2,7 +2,7 @@ package co.edu.uniquindio.sga.infrastructure.security;
 
 import co.edu.uniquindio.sga.application.seguridad.Solicitante;
 import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
-import co.edu.uniquindio.sga.domain.valueobject.Rol;
+import co.edu.uniquindio.sga.application.seguridad.Rol;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;

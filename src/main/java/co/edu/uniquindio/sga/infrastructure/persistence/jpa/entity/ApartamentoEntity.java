@@ -40,6 +40,9 @@ public class ApartamentoEntity {
     @Column(name = "nombre", nullable = false, length = 80)
     private String nombre;
 
+    @Column(name = "descripcion", nullable = false, length = 1000)
+    private String descripcion;
+
     @Column(name = "dormitorios", nullable = false)
     private int dormitorios;
 
@@ -54,7 +57,19 @@ public class ApartamentoEntity {
     private boolean activo;
 
     @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "apartamento_caracteristicas", joinColumns = @JoinColumn(name = "apartamento_id"))
+    @OrderColumn(name = "posicion")
+    @Column(name = "caracteristica", nullable = false, length = 80)
+    private List<String> caracteristicas = new ArrayList<>();
+
+    /** Histórico de tarifas (7.4); la vigente de cada temporada es la más reciente. */
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "apartamento_tarifas", joinColumns = @JoinColumn(name = "apartamento_id"))
     @OrderColumn(name = "posicion")
     private List<TarifaEmbeddable> tarifas = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "apartamento_novedades", joinColumns = @JoinColumn(name = "apartamento_id"))
+    @OrderColumn(name = "posicion")
+    private List<NovedadApartamentoEmbeddable> novedades = new ArrayList<>();
 }

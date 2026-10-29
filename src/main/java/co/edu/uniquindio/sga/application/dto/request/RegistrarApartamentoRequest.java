@@ -4,16 +4,20 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
 import java.util.List;
 
-/** Alta de un apartamento con sus tarifas (7.3, 7.4). */
+/** Alta de un apartamento con sus datos y sus tarifas (7.3, 7.4). */
 public record RegistrarApartamentoRequest(
         @NotBlank @Pattern(regexp = "^APT-[0-9]{3}$", message = "debe tener el formato APT-NNN") String identificacion,
         @NotBlank @Size(max = 80) String nombre,
+        @NotNull @Size(max = 1000) String descripcion,
         @Min(1) int dormitorios,
         @Min(1) int capacidad,
+        @NotNull @Size(max = 20) List<@NotBlank @Size(max = 80) String> caracteristicas,
         @NotEmpty List<@Valid TarifaRequest> tarifas
 ) {
 }

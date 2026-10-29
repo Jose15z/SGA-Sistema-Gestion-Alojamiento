@@ -4,6 +4,7 @@ import co.edu.uniquindio.sga.domain.entity.Apartamento;
 import co.edu.uniquindio.sga.domain.repository.ApartamentoRepository;
 import co.edu.uniquindio.sga.domain.repository.Pagina;
 import co.edu.uniquindio.sga.domain.repository.PeticionPagina;
+import co.edu.uniquindio.sga.domain.valueobject.EstadoOperativo;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.entity.ApartamentoEntity;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.mapper.ApartamentoPersistenceMapper;
@@ -44,8 +45,8 @@ public class ApartamentoJpaRepository implements ApartamentoRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public Pagina<Apartamento> listar(PeticionPagina pagina) {
-        return PaginacionJpa.aPagina(dataRepository.findAll(
+    public Pagina<Apartamento> listar(EstadoOperativo estado, boolean incluirRetirados, PeticionPagina pagina) {
+        return PaginacionJpa.aPagina(dataRepository.listar(estado, incluirRetirados,
                 PaginacionJpa.aPageable(pagina, Sort.by("identificacion"))), mapper::toDomain);
     }
 

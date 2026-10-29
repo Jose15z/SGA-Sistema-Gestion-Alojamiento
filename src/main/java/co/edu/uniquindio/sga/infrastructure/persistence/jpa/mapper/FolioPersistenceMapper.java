@@ -2,6 +2,7 @@ package co.edu.uniquindio.sga.infrastructure.persistence.jpa.mapper;
 
 import co.edu.uniquindio.sga.domain.entity.Folio;
 import co.edu.uniquindio.sga.domain.entity.Pago;
+import co.edu.uniquindio.sga.domain.valueobject.AutorizacionCierre;
 import co.edu.uniquindio.sga.domain.valueobject.Cargo;
 import co.edu.uniquindio.sga.domain.valueobject.CodigoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.Dinero;
@@ -23,6 +24,9 @@ public interface FolioPersistenceMapper {
     @Mapping(target = "alojamientoLiquidado", expression = "java(folio.alojamientoLiquidado())")
     @Mapping(target = "cargos", expression = "java(folio.obtenerCargos().stream().map(this::toCargoEmbeddable).toList())")
     @Mapping(target = "pagos", expression = "java(folio.obtenerPagos().stream().map(this::toPagoEmbeddable).toList())")
+    @Mapping(target = "autorizacionAutor", source = "autorizacionCierre.autor")
+    @Mapping(target = "autorizacionMotivo", source = "autorizacionCierre.motivo")
+    @Mapping(target = "autorizacionMomento", source = "autorizacionCierre.momento")
     FolioEntity toEntity(Folio folio);
 
     CargoEmbeddable toCargoEmbeddable(Cargo cargo);
@@ -52,6 +56,7 @@ public interface FolioPersistenceMapper {
                         .toList(),
                 entity.isCerrado(),
                 entity.isAlojamientoLiquidado(),
-                entity.getAutorizacionCierre());
+                entity.getAutorizacionAutor() == null ? null : new AutorizacionCierre(entity.getAutorizacionAutor(),
+                        entity.getAutorizacionMotivo(), entity.getAutorizacionMomento()));
     }
 }

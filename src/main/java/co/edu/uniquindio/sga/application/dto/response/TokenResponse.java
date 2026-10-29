@@ -1,6 +1,6 @@
 package co.edu.uniquindio.sga.application.dto.response;
 
-import co.edu.uniquindio.sga.domain.valueobject.Rol;
+import co.edu.uniquindio.sga.application.seguridad.Rol;
 import java.time.Instant;
 
 /** Token de sesión emitido al iniciar sesión. */

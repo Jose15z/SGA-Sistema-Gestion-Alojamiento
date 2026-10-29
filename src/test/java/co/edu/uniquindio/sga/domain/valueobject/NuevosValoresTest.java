@@ -19,12 +19,6 @@ class NuevosValoresTest {
     }
 
     @Test
-    void correoSeNormalizaYValidaSuFormato() {
-        assertEquals(new CorreoElectronico("ana@correo.com"), new CorreoElectronico(" Ana@Correo.COM "));
-        assertThrows(ReglaDominioException.class, () -> new CorreoElectronico("sin-arroba"));
-    }
-
-    @Test
     void identificadorExternoNoPuedeEstarVacio() {
         assertEquals("BK-1", new IdentificadorExterno(" BK-1 ").valor());
         assertThrows(ReglaDominioException.class, () -> new IdentificadorExterno("   "));
@@ -39,11 +33,25 @@ class NuevosValoresTest {
     }
 
     @Test
-    void canalSegunElRolQueRegistra() {
-        assertTrue(CanalOrigen.PORTAL.loRegistra(Rol.HUESPED));
-        assertFalse(CanalOrigen.PORTAL.loRegistra(Rol.RECEPCIONISTA));
-        assertTrue(CanalOrigen.DIRECTO.loRegistra(Rol.ADMINISTRADOR));
-        assertFalse(CanalOrigen.EXTERNO.loRegistra(Rol.HUESPED));
+    void servicioAdicionalConCargoCobraPorUnidad() {
+        ServicioAdicional lavanderia = new ServicioAdicional("lavanderia", "Lavandería", true, Dinero.de(25_000),
+                UnidadCobro.POR_SOLICITUD);
+        assertEquals("LAVANDERIA", lavanderia.codigo());
+        assertEquals(Dinero.de(50_000), lavanderia.cargoPor(2));
+        assertThrows(ReglaDominioException.class, () -> lavanderia.cargoPor(0));
+        ServicioAdicional wifi = new ServicioAdicional("WIFI", "Wifi", false, Dinero.CERO, UnidadCobro.POR_NOCHE);
+        assertThrows(ReglaDominioException.class, () -> wifi.cargoPor(1));
+        assertThrows(ReglaDominioException.class,
+                () -> new ServicioAdicional("SPA", "Spa", true, Dinero.CERO, UnidadCobro.POR_PERSONA));
+    }
+
+    @Test
+    void ubicacionYAutorizacionDeCierreSeValidanAlCrearse() {
+        assertThrows(ReglaDominioException.class,
+                () -> new Ubicacion(java.math.BigDecimal.valueOf(91), java.math.BigDecimal.ZERO));
+        assertThrows(ReglaDominioException.class,
+                () -> new AutorizacionCierre("admin", " ", java.time.LocalDateTime.now()));
+        assertEquals("motivo", new AutorizacionCierre(" admin ", " motivo ", java.time.LocalDateTime.now()).motivo());
     }
 
     @Test

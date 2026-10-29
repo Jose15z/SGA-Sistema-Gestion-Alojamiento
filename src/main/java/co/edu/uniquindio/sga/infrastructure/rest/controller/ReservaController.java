@@ -2,18 +2,20 @@ package co.edu.uniquindio.sga.infrastructure.rest.controller;
 
 import co.edu.uniquindio.sga.application.dto.request.CrearReservaRequest;
 import co.edu.uniquindio.sga.application.dto.request.HoraLlegadaRequest;
-import co.edu.uniquindio.sga.application.dto.request.ModificarEstanciaRequest;
+import co.edu.uniquindio.sga.application.dto.request.ModificarReservaRequest;
 import co.edu.uniquindio.sga.application.dto.request.MotivoRequest;
 import co.edu.uniquindio.sga.application.dto.request.NovedadLlegadaRequest;
 import co.edu.uniquindio.sga.application.dto.request.RegistrarVehiculoRequest;
+import co.edu.uniquindio.sga.application.dto.response.MovimientosDelDiaResponse;
 import co.edu.uniquindio.sga.application.dto.response.PaginaResponse;
 import co.edu.uniquindio.sga.application.dto.response.ReservaDetalleResponse;
 import co.edu.uniquindio.sga.application.dto.response.ReservaResumenResponse;
 import co.edu.uniquindio.sga.application.seguridad.Solicitante;
 import co.edu.uniquindio.sga.application.usecase.CancelarReservaUseCase;
 import co.edu.uniquindio.sga.application.usecase.ConfirmarReservaUseCase;
+import co.edu.uniquindio.sga.application.usecase.ConsultarMovimientosDelDiaUseCase;
 import co.edu.uniquindio.sga.application.usecase.ConsultarReservaUseCase;
-import co.edu.uniquindio.sga.application.usecase.ConsultarReservasUseCase;
+import co.edu.uniquindio.sga.application.usecase.ConsultarReservasPorEstadoUseCase;
 import co.edu.uniquindio.sga.application.usecase.CrearReservaUseCase;
 import co.edu.uniquindio.sga.application.usecase.DeclararNoShowUseCase;
 import co.edu.uniquindio.sga.application.usecase.IndicarHoraLlegadaUseCase;
@@ -37,6 +39,9 @@ import co.edu.uniquindio.sga.infrastructure.rest.mapper.ValorRestMapper;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
+import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
+import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -71,7 +76,7 @@ public class ReservaController {
 
     private final CrearReservaUseCase crear;
     private final ConsultarReservaUseCase consultar;
-    private final ConsultarReservasUseCase consultarReservas;
+    private final ConsultarReservasPorEstadoUseCase consultarReservas;
     private final ConfirmarReservaUseCase confirmar;
     private final CancelarReservaUseCase cancelar;
     private final IndicarHoraLlegadaUseCase indicarHoraLlegada;
@@ -82,18 +87,19 @@ public class ReservaController {
     private final RegistrarLlegadaUseCase registrarLlegada;
     private final RegistrarSalidaUseCase registrarSalida;
     private final DeclararNoShowUseCase declararNoShow;
+    private final ConsultarMovimientosDelDiaUseCase movimientosDelDia;
     private final ReservaRestMapper mapper;
     private final ValorRestMapper valorMapper;
     private final Clock reloj;
 
     public ReservaController(CrearReservaUseCase crear, ConsultarReservaUseCase consultar,
-                             ConsultarReservasUseCase consultarReservas, ConfirmarReservaUseCase confirmar,
+                             ConsultarReservasPorEstadoUseCase consultarReservas, ConfirmarReservaUseCase confirmar,
                              CancelarReservaUseCase cancelar, IndicarHoraLlegadaUseCase indicarHoraLlegada,
                              InformarNovedadLlegadaUseCase informarNovedad,
                              ResolverNovedadLlegadaUseCase resolverNovedad, ModificarReservaUseCase modificar,
                              RegistrarVehiculoUseCase registrarVehiculo, RegistrarLlegadaUseCase registrarLlegada,
                              RegistrarSalidaUseCase registrarSalida, DeclararNoShowUseCase declararNoShow,
-                             ReservaRestMapper mapper, ValorRestMapper valorMapper, Clock reloj) {
+                             ConsultarMovimientosDelDiaUseCase movimientosDelDia, ReservaRestMapper mapper, ValorRestMapper valorMapper, Clock reloj) {
         this.crear = crear;
         this.consultar = consultar;
         this.consultarReservas = consultarReservas;
@@ -107,6 +113,7 @@ public class ReservaController {
         this.registrarLlegada = registrarLlegada;
         this.registrarSalida = registrarSalida;
         this.declararNoShow = declararNoShow;
+        this.movimientosDelDia = movimientosDelDia;
         this.mapper = mapper;
         this.valorMapper = valorMapper;
         this.reloj = reloj;
@@ -133,16 +140,29 @@ public class ReservaController {
     public ResponseEntity<PaginaResponse<ReservaResumenResponse>> listar(
             @RequestParam(required = false) EstadoReserva estado,
             @RequestParam(required = false) @Pattern(regexp = "^APT-[0-9]{3}$") String apartamento,
+            @RequestParam(required = false) CanalOrigen canal,
+            @RequestParam(required = false) @Size(max = 30) String titular,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entradaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entradaHasta,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(10) int size,
             @Parameter(hidden = true) Solicitante solicitante) {
         FiltroReservas filtro = new FiltroReservas(estado,
-                apartamento == null ? null : new IdentificacionApartamento(apartamento),
-                null, entradaDesde, entradaHasta);
+                apartamento == null ? null : new IdentificacionApartamento(apartamento), canal,
+                titular == null || titular.isBlank() ? null : new DocumentoIdentidad(titular),
+                entradaDesde, entradaHasta);
         return ResponseEntity.ok(valorMapper.toPagina(
                 consultarReservas.ejecutar(filtro, new PeticionPagina(page, size), solicitante), mapper::toResumen));
+    }
+
+    /** 7.6: llegadas y salidas previstas del día (por defecto, hoy). */
+    @GetMapping("/movimientos-del-dia")
+    public ResponseEntity<MovimientosDelDiaResponse> movimientosDelDia(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        var resultado = movimientosDelDia.ejecutar(fecha == null ? LocalDate.now(reloj) : fecha);
+        return ResponseEntity.ok(new MovimientosDelDiaResponse(resultado.dia(),
+                resultado.llegadas().stream().map(mapper::toResumen).toList(),
+                resultado.salidas().stream().map(mapper::toResumen).toList()));
     }
 
     @GetMapping("/{codigo}")
@@ -189,12 +209,22 @@ public class ReservaController {
                 resolverNovedad.ejecutar(new CodigoReserva(codigo), request.motivo(), solicitante)));
     }
 
-    @PutMapping("/{codigo}/estancia")
-    public ResponseEntity<ReservaDetalleResponse> modificarEstancia(
-            @PathVariable @Pattern(regexp = CODIGO) String codigo, @Valid @RequestBody ModificarEstanciaRequest request,
+    /** 7.5: fechas, acompañantes o apartamento; un campo ausente conserva su valor. */
+    @PutMapping("/{codigo}/modificacion")
+    public ResponseEntity<ReservaDetalleResponse> modificar(
+            @PathVariable @Pattern(regexp = CODIGO) String codigo, @Valid @RequestBody ModificarReservaRequest request,
             @Parameter(hidden = true) Solicitante solicitante) {
+        if ((request.fechaEntrada() == null) != (request.fechaSalida() == null)) {
+            throw new IllegalArgumentException("Para cambiar las fechas indique la fecha de entrada y la de salida");
+        }
+        LocalDate hoy = LocalDate.now(reloj);
         return ResponseEntity.ok(mapper.toDetalle(modificar.ejecutar(new CodigoReserva(codigo),
-                new Estancia(request.fechaEntrada(), request.fechaSalida()), solicitante)));
+                request.identificacionApartamento() == null ? null
+                        : new IdentificacionApartamento(request.identificacionApartamento()),
+                request.fechaEntrada() == null ? null : new Estancia(request.fechaEntrada(), request.fechaSalida()),
+                request.acompanantes() == null ? null
+                        : request.acompanantes().stream().map(a -> mapper.toOcupante(a, hoy)).toList(),
+                solicitante)));
     }
 
     @PostMapping("/{codigo}/vehiculos")

@@ -7,6 +7,7 @@ import co.edu.uniquindio.sga.domain.repository.PeticionPagina;
 import co.edu.uniquindio.sga.domain.repository.ReservaRepository;
 import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
 import co.edu.uniquindio.sga.domain.valueobject.CodigoReserva;
+import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.Estancia;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +76,7 @@ public class ReservaJpaRepository implements ReservaRepository {
         return PaginacionJpa.aPagina(dataRepository.buscar(
                 filtro.estado(),
                 filtro.apartamento() == null ? null : filtro.apartamento().valor(),
+                filtro.canal(),
                 filtro.titular() == null ? null : filtro.titular().numero(),
                 filtro.entradaDesde(),
                 filtro.entradaHasta(),
@@ -84,6 +87,26 @@ public class ReservaJpaRepository implements ReservaRepository {
     @Transactional(readOnly = true)
     public boolean existePorCanalEIdentificadorExterno(CanalOrigen canal, IdentificadorExterno identificador) {
         return dataRepository.existsByCanalOrigenAndIdentificadorExterno(canal, identificador.valor());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reserva> buscarLlegadasPrevistas(LocalDate dia) {
+        return dataRepository.findByEstanciaFechaEntradaAndEstadoInOrderByCodigo(dia,
+                List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA)).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reserva> buscarSalidasPrevistas(LocalDate dia) {
+        return dataRepository.findByEstanciaFechaSalidaAndEstadoInOrderByCodigo(dia,
+                List.of(EstadoReserva.EN_CURSO)).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existenActivasDelTitular(DocumentoIdentidad titular) {
+        return dataRepository.existsByTitularDocumentoAndEstadoIn(titular.numero(), ACTIVAS);
     }
 
     @Override
