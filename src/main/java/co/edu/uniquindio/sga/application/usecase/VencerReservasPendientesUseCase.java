@@ -1,16 +1,34 @@
 package co.edu.uniquindio.sga.application.usecase;
 
-import co.edu.uniquindio.sga.application.exception.*;
-import co.edu.uniquindio.sga.domain.entity.*;
-import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
-import co.edu.uniquindio.sga.domain.repository.*;
-import co.edu.uniquindio.sga.domain.service.*;
-import co.edu.uniquindio.sga.domain.valueobject.*;
-import java.time.*;
-import java.util.*;
+import co.edu.uniquindio.sga.application.exception.FolioNoEncontradoException;
+import co.edu.uniquindio.sga.domain.entity.Folio;
+import co.edu.uniquindio.sga.domain.entity.Reserva;
+import co.edu.uniquindio.sga.domain.repository.ConfiguracionAlojamiento;
+import co.edu.uniquindio.sga.domain.repository.FolioRepository;
+import co.edu.uniquindio.sga.domain.repository.ReservaRepository;
+import co.edu.uniquindio.sga.domain.valueobject.Dinero;
+import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
+import co.edu.uniquindio.sga.domain.valueobject.PlazoConfirmacion;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/** RN-21: vence pendientes después del plazo y revierte alojamiento sin penalidad de cancelación voluntaria. */
-public final class VencerReservasPendientesUseCase {
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * RN-21: vence las reservas PENDIENTE que superaron el plazo de confirmación.
+ * Lo dispara {@code VencimientoReservasProgramado}, sin intervención manual.
+ *
+ * <p>Decisión: un solo {@code @Transactional} para el lote. Todas las cuentas se
+ * prevalidan antes de modificar la primera reserva, de modo que una cuenta
+ * inválida no deja el lote a medias; si algo falla, se revierte todo y la
+ * siguiente ejecución lo reintenta.</p>
+ */
+@Service
+public class VencerReservasPendientesUseCase {
     private final ReservaRepository reservas;
     private final FolioRepository folios;
     private final ConfiguracionAlojamiento configuracion;
@@ -23,6 +41,7 @@ public final class VencerReservasPendientesUseCase {
         this.reloj = Objects.requireNonNull(reloj);
     }
     /** Devuelve cuántas reservas vencieron; una segunda ejecución no repite movimientos. */
+    @Transactional
     public int ejecutar() {
         LocalDateTime ahora = LocalDateTime.now(reloj);
         PlazoConfirmacion plazo = Objects.requireNonNull(configuracion.plazoConfirmacion());

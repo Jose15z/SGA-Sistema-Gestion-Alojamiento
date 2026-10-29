@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ReservaOperacionesAdicionalesTest {
     ValorCongelado cotizar(Estancia estancia,long tarifa) {
         return new ValorCongelado(estancia.nochesOcupadas().stream()
-                .map(n -> new CargoNoche(n,"Base",Dinero.de(tarifa),1)).toList());
+                .map(n -> new CargoNoche(n,TipoTemporada.BASE,Dinero.de(tarifa),1)).toList());
     }
     @Test void modificacionConservaPoliticaYCalculaAjusteNegativo() {
         Reserva r=ReservasDePrueba.pendiente();Estancia nueva=new Estancia(LocalDate.of(2026,12,11),LocalDate.of(2026,12,12));

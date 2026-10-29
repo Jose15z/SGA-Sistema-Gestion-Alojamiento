@@ -1,14 +1,14 @@
-# SGA - Sistema de Gestión de Alojamiento
+# SGA - Sistema de Gestión de Alojamiento · Siete Raíces
 
-> Estado de la entrega actualizado: [implementación de reservas y validación](IMPLEMENTACION_ENTREGA_1.md). Los apartados de modelo y próximos pasos de este README describen la base inicial; consulta ese documento para el estado de las Guías 05 y 06.
+Proyecto de **Programación Avanzada** (Ingeniería de Sistemas y Computación, Universidad del Quindío). Backend del SGA para *Siete Raíces – Apartamentos Turísticos* (Armenia, Quindío), construido con **Domain-Driven Design** y **arquitectura hexagonal**, con el lenguaje ubicuo en español.
 
-Proyecto desarrollado para la asignatura **Programación Avanzada** del programa de Ingeniería de Sistemas y Computación de la **Universidad del Quindío**.
-
-El SGA tiene como propósito administrar un alojamiento turístico compuesto por apartamentos independientes, permitiendo gestionar apartamentos, reservas, estancias, ocupantes, disponibilidad, temporadas, tarifas, folios, pagos y bloqueos.
-
-El proyecto se desarrolla aplicando principios de **Domain-Driven Design (DDD)** y **Arquitectura Hexagonal**, manteniendo el lenguaje ubicuo del dominio en español.
-
----
+| Documento | Contenido |
+|---|---|
+| [docs/ENTREGA_2.md](docs/ENTREGA_2.md) | Lo implementado en la Entrega 2: correcciones de la sustentación, invariantes por agregado, casos de uso, matriz de trazabilidad ampliada con endpoints, matriz de roles y recorrido completo de una reserva |
+| [docs/api/openapi.yaml](docs/api/openapi.yaml) | Contrato de la API (lo verifica `ContratoOpenApiTest`) |
+| [docs/pruebas/SGA-Entrega2.postman_collection.json](docs/pruebas/SGA-Entrega2.postman_collection.json) | Colección de pruebas de la sustentación |
+| [docs/diagramas/DiagramaDeClases.md](docs/diagramas/DiagramaDeClases.md) | Diagrama de clases actualizado |
+| [IMPLEMENTACION_ENTREGA_1.md](IMPLEMENTACION_ENTREGA_1.md) | Estado al cierre de la Entrega 1 (Guías 05 y 06) |
 
 ## Integrantes
 
@@ -16,321 +16,91 @@ El proyecto se desarrolla aplicando principios de **Domain-Driven Design (DDD)**
 - Daniela Muñoz Arboleda
 - Adrian David Navarro
 
----
-
 ## Tecnologías
 
-- Java 25
-- Spring Boot 4.1.1
-- Gradle - Groovy DSL
-- Spring Web MVC
-- Spring Validation
-- Spring Data JPA
-- H2 Database
-- JUnit
-- Git y GitHub
-
----
-
-## Arquitectura
-
-El proyecto sigue una estructura basada en Arquitectura Hexagonal:
-
-```text
-co.edu.uniquindio.sga
-├── domain
-│   ├── entity
-│   ├── valueobject
-│   └── exception
-├── application
-└── infrastructure
-```
-
-### Domain
-
-Contiene los conceptos y reglas propias del negocio.
-
-El dominio se mantiene independiente de frameworks y tecnologías externas. Las clases ubicadas en este paquete no dependen de Spring, JPA ni Lombok.
-
-### Application
-
-Contendrá los casos de uso de la aplicación y coordinará las operaciones del dominio.
-
-### Infrastructure
-
-Contendrá los adaptadores técnicos necesarios para interactuar con elementos externos, como la API REST y la persistencia.
-
----
-
-## Modelo de dominio actual
-
-Actualmente se encuentra implementada la primera parte del modelo de dominio.
-
-### Entidades
-
-- `Apartamento`
-- `Ocupante`
-- `Reserva`
-
-Las entidades poseen identidad propia, identificadores inmutables y su igualdad se determina únicamente mediante dicha identidad.
-
-### Objetos de valor
-
-- `Capacidad`
-- `Estancia`
-- `EstadoReserva`
-- `EstadoOperativo`
-- `CanalOrigen`
-- `CodigoReserva`
-- `IdentificacionApartamento`
-- `DocumentoIdentidad`
-- `UmbralEdadFacturable`
-- `FechaCreacion`
-
-Los objetos de valor son inmutables y representan conceptos del lenguaje ubicuo del SGA.
-
-### Excepción del dominio
-
-- `ReglaDominioException`
-
-Se utiliza para representar violaciones de reglas propias del negocio y diferenciarlas de errores técnicos.
-
----
-
-## Reglas de negocio implementadas
-
-### RN-02 - Capacidad del apartamento
-
-El número total de ocupantes de una reserva no puede superar la capacidad definida para el apartamento.
-
-Todos los ocupantes cuentan para la capacidad, sean facturables o no.
-
-```text
-totalOcupantes <= capacidad
-```
-
-### RN-03 - Estancia mínima
-
-Toda estancia debe tener como mínimo una noche.
-
-La fecha de salida debe ser posterior a la fecha de entrada.
-
-```text
-fechaSalida > fechaEntrada
-```
-
-El intervalo de una estancia se interpreta como:
-
-```text
-[fechaEntrada, fechaSalida)
-```
-
-Por ejemplo, una estancia del 10 al 12 corresponde a dos noches.
-
-### RN-04 - Reservas hacia el pasado
-
-No es posible crear una nueva reserva cuya fecha de entrada sea anterior a la fecha actual.
-
-### RN-06 - Ocupante facturable
-
-Un ocupante genera cargo cuando su edad en la fecha de entrada alcanza o supera el umbral de edad facturable configurado por el alojamiento.
-
-La edad no se almacena. Se calcula a partir de la fecha de nacimiento.
-
----
-
-## Lenguaje ubicuo
-
-Los conceptos propios del negocio se mantienen en español tanto en el modelo como en el código.
-
-Ejemplos:
-
-```text
-Apartamento
-Reserva
-Estancia
-Ocupante
-Titular
-Capacidad
-Tarifa
-Folio
-Pago
-Bloqueo
-```
-
-Se evitan términos genéricos o traducciones que no pertenecen al lenguaje ubicuo:
-
-```text
-Room
-Booking
-Guest
-CheckIn
-Invoice
-```
-
-Los paquetes estructurales utilizan vocabulario técnico en inglés:
-
-```text
-domain
-application
-infrastructure
-```
-
----
-
-## Estructura actual del dominio
-
-```text
-domain/
-├── entity/
-│   ├── Apartamento.java
-│   ├── Ocupante.java
-│   └── Reserva.java
-│
-├── valueobject/
-│   ├── CanalOrigen.java
-│   ├── Capacidad.java
-│   ├── CodigoReserva.java
-│   ├── DocumentoIdentidad.java
-│   ├── Estancia.java
-│   ├── EstadoOperativo.java
-│   ├── EstadoReserva.java
-│   ├── FechaCreacion.java
-│   ├── IdentificacionApartamento.java
-│   └── UmbralEdadFacturable.java
-│
-└── exception/
-    └── ReglaDominioException.java
-```
-
----
-
-## Requisitos
-
-Para ejecutar el proyecto es necesario tener instalado:
-
-- JDK 25
-- Git
-
-No es necesario instalar Gradle manualmente, ya que el proyecto utiliza **Gradle Wrapper**.
-
----
+Java 25 · Spring Boot 4.1 (Web MVC, Validation, Data JPA, Security, OAuth2 Resource Server) · H2 · MapStruct 1.6 · Lombok (solo en infraestructura) · springdoc-openapi (Swagger UI) · JUnit 5 y Mockito · Gradle.
 
 ## Ejecución
 
-Clonar el repositorio:
+Requisitos: JDK 25 y Git (Gradle se usa con el wrapper).
 
 ```bash
-git clone https://github.com/Jose15z/SGA-Sistema-Gestion-Alojamiento.git
+./gradlew test
 ```
-
-Entrar al proyecto:
-
-```bash
-cd SGA-Sistema-Gestion-Alojamiento
-```
-
-Compilar y ejecutar las pruebas:
-
-```bash
-./gradlew build
-```
-
-Ejecutar la aplicación:
 
 ```bash
 ./gradlew bootRun
 ```
 
-La aplicación se ejecuta por defecto en:
+La clave del JWT **no está en el repositorio**. Se entrega con la variable de entorno `SGA_JWT_SECRETO` (al menos 32 caracteres). Si no se define, la aplicación genera una clave aleatoria al arrancar y los tokens dejan de servir al reiniciar:
 
-```text
-http://localhost:8080
+```bash
+SGA_JWT_SECRETO='una-clave-larga-de-al-menos-32-caracteres' ./gradlew bootRun
 ```
 
----
+| Recurso | URL |
+|---|---|
+| API | `http://localhost:8080/api` |
+| Swagger UI (botón **Authorize** con el token de `/api/auth/login`) | `http://localhost:8080/swagger-ui.html` |
+| Consola H2 (`jdbc:h2:mem:sgadb`, usuario `sa`, sin contraseña) | `http://localhost:8080/h2-console` |
 
-## Base de datos H2
+Swagger UI muestra dos definiciones: el contrato `docs/api/openapi.yaml` (seleccionado por defecto) y el documento generado desde el código.
 
-Durante el desarrollo se utiliza una base de datos H2 en memoria.
+### Usuarios de prueba (cargados por `data.sql`)
 
-La consola se encuentra disponible en:
+| Correo | Contraseña | Rol |
+|---|---|---|
+| admin@sieteraices.co | Admin123* | ADMINISTRADOR |
+| recepcion@sieteraices.co | Recepcion123* | RECEPCIONISTA |
+| servicio@sieteraices.co | Servicio123* | PERSONAL_SERVICIO |
+| ana.ramirez@correo.com | Huesped123* | HUESPED |
+| carlos.gomez@correo.com | Huesped123* | HUESPED |
 
-```text
-http://localhost:8080/h2-console
+Además se cargan el alojamiento con sus normas y servicios adicionales, los 7 apartamentos de la Ficha con descripción, características e histórico de tarifas (APT-202 está FUERA_DE_SERVICIO), las temporadas Alta y Especial, la política de cancelación versión 1, un bloqueo vigente y 7 reservas (RES-2025-00001 a RES-2025-00007) que cubren los seis estados y los canales PORTAL, DIRECTO y EXTERNO, con sus folios. Las fechas de las reservas son relativas al día de arranque.
+
+La recuperación de contraseña usa un notificador local: el código de 6 dígitos aparece en la consola de la aplicación.
+
+### Colección de pruebas
+
+Con la aplicación **recién arrancada**, importar la colección en Postman y ejecutarla completa con el Runner, o desde la terminal:
+
+```bash
+npx newman run docs/pruebas/SGA-Entrega2.postman_collection.json
 ```
 
-Configuración:
+Cubre usuarios y roles, el alojamiento, el flujo completo de una reserva (incluida su modificación), la operación diaria, un 409 por cada regla que expone la API y los 400, 401, 403 y 404 (179 solicitudes, 334 aserciones). Para repetirla, reinicie la aplicación: la base H2 vive en memoria.
+
+## Arquitectura
 
 ```text
-JDBC URL: jdbc:h2:mem:sgadb
-Usuario: sa
-Contraseña: vacía
+co.edu.uniquindio.sga
+├── domain                      ← Java puro: sin Spring, JPA ni Lombok
+│   ├── entity                  Reserva, Apartamento, Alojamiento, Folio, Bloqueo, PoliticaCancelacion, Ocupante, Pago
+│   ├── valueobject             Estancia, Capacidad, Temporada, CalendarioTemporadas, Tarifa, Dinero, ...
+│   ├── service                 Servicios del catálogo (disponibilidad, cotización, retención, parqueadero, ...)
+│   ├── repository              Puertos (uno por agregado) y Pagina, PeticionPagina, FiltroReservas
+│   └── exception               ReglaDominioException (→ 409)
+├── application
+│   ├── usecase                 Casos de uso con @Service y @Transactional
+│   ├── dto/request, response   DTOs record con Bean Validation y ErrorResponse
+│   ├── exception               Recursos inexistentes (→ 404), acceso denegado (→ 403), credenciales (→ 401)
+│   ├── port                    UsuarioRepository, CodigoRecuperacionRepository, NotificadorCorreo, CifradorContrasenas, EmisorTokens
+│   └── seguridad               Usuario, Rol, CorreoElectronico, PoliticaContrasena y Solicitante (el dominio no conoce al usuario, 3.6)
+└── infrastructure
+    ├── rest                    Controllers, mappers MapStruct y GlobalExceptionHandler
+    ├── persistence/jpa         Entidades JPA, embebibles, mappers y adaptadores de cada puerto
+    ├── persistence/inmemory    Adaptadores en memoria para pruebas (no son beans)
+    ├── security                JWT, BCrypt y matriz de roles
+    ├── notificacion            NotificadorCorreoLocal (I-02)
+    ├── config                  DomainServiceConfig, parámetros de la Ficha, zona horaria, reloj, Swagger
+    └── scheduling              Vencimiento automático de reservas PENDIENTE (RN-21)
 ```
-
-Los datos almacenados en H2 se eliminan cuando se detiene la aplicación.
-
----
-
-## Estado actual del proyecto
-
-### Completado
-
-- Configuración inicial de Spring Boot y Gradle.
-- Configuración de Java 25.
-- Configuración de H2.
-- Estructura inicial de Arquitectura Hexagonal.
-- Modelado inicial del dominio.
-- Implementación de `Apartamento`.
-- Implementación de `Ocupante`.
-- Implementación de `Reserva`.
-- Implementación de objetos de valor iniciales.
-- Implementación de `FechaCreacion` como objeto de valor.
-- Implementación de RN-02.
-- Implementación de RN-03.
-- Implementación de RN-04.
-- Implementación de RN-06.
-
-### Próximos pasos
-
-- Implementar pruebas unitarias del dominio.
-- Completar el modelo de dominio.
-- Implementar `Temporada`.
-- Implementar `Tarifa`.
-- Implementar `Folio`.
-- Implementar `Cargo`.
-- Implementar `Pago`.
-- Implementar `Bloqueo`.
-- Incorporar agregados y servicios de dominio.
-- Implementar casos de uso.
-- Implementar adaptadores de persistencia.
-- Implementar API REST.
-- Desarrollar el frontend del SGA.
-
----
 
 ## Principios de diseño
 
-El desarrollo del SGA busca mantener un modelo de dominio rico.
-
-Por esta razón:
-
-- Las entidades no utilizan setters genéricos.
-- Las reglas del negocio viven dentro del dominio.
-- Los objetos de valor son inmutables.
-- Las entidades se comparan por identidad.
-- El dominio no depende de Spring, JPA ni otros frameworks.
-- Se utiliza el lenguaje ubicuo definido para el SGA.
-- Los valores configurables del alojamiento no se encuentran quemados en el código.
-
----
-
-## Información académica
-
-**Universidad del Quindío**
-
-Programa de Ingeniería de Sistemas y Computación
-
-Asignatura: **Programación Avanzada**
-
-Proyecto: **SGA - Sistema de Gestión de Alojamiento**
+- Las reglas del negocio viven en el dominio; los casos de uso orquestan y los controllers solo validan la forma, traducen y delegan.
+- Entidades con constructor controlado, sin setters y con igualdad por identidad; objetos de valor inmutables (`record`/`enum`) que se validan al construirse.
+- Las transiciones de estado usan métodos con intención de negocio (`confirmar`, `cancelar`, `registrarLlegada`, `declararNoShow`), nunca un `cambiarEstado` genérico.
+- Los parámetros del alojamiento (umbral de edad, horarios, preparación, plazo, anticipo, no-show a las **20:00**, descuento, mascotas, vehículos) están en `application.properties` y se cambian sin recompilar.
+- Ningún registro de negocio se borra físicamente: retiro de apartamentos, levantamiento de bloqueos y desactivación de usuarios son eliminaciones lógicas.
+- El usuario es un concepto de acceso y vive en `application`; el dominio solo conoce al titular de la reserva por su documento.

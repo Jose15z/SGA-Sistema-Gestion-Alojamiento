@@ -21,12 +21,12 @@ import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
  * configuradas todas sus tarifas.</p>
  *
  * @param apartamento identificación del apartamento
- * @param temporada nombre de la temporada a la que aplica
+ * @param temporada tipo de temporada a la que aplica (BASE, ALTA o ESPECIAL)
  * @param valorPorOcupanteNoche importe por ocupante facturable y noche
  */
 public record Tarifa(
         IdentificacionApartamento apartamento,
-        String temporada,
+        TipoTemporada temporada,
         Dinero valorPorOcupanteNoche
 ) {
 
@@ -46,7 +46,7 @@ public record Tarifa(
             );
         }
 
-        if (temporada == null || temporada.isBlank()) {
+        if (temporada == null) {
             throw new ReglaDominioException(
                     "La tarifa debe indicar la temporada"
             );
@@ -64,6 +64,5 @@ public record Tarifa(
             );
         }
 
-        temporada = temporada.trim();
     }
 }

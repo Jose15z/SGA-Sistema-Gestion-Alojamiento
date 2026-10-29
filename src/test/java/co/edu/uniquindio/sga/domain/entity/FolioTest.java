@@ -12,7 +12,7 @@ class FolioTest {
         folio = new Folio(new CodigoReserva("RES-2026-00001"), cargo(TipoCargo.ALOJAMIENTO,200_000));
     }
     Cargo cargo(TipoCargo tipo,long valor) { return new Cargo(tipo,"Concepto",Dinero.de(valor),ReservasDePrueba.CREACION,"recepcion"); }
-    Pago pago(long valor) { return new Pago(UUID.randomUUID(),Dinero.de(valor),"Efectivo",ReservasDePrueba.CREACION,"Movimiento","recepcion"); }
+    Pago pago(long valor) { return new Pago(UUID.randomUUID(),Dinero.de(valor),MedioPago.EFECTIVO,ReservasDePrueba.CREACION,"Movimiento","recepcion"); }
     @Test void pagosParcialesYDevolucionMantienenSaldoDerivado() {
         folio.registrarPago(pago(50_000));folio.registrarPago(pago(30_000));folio.registrarPago(pago(-10_000));
         assertEquals(Dinero.de(130_000),folio.saldo());
@@ -33,19 +33,24 @@ class FolioTest {
         assertThrows(UnsupportedOperationException.class,()->folio.obtenerPagos().add(pago(1)));
     }
     @Test void cierreConSaldoRequiereAutorizacion() {
-        assertThrows(ReglaDominioException.class,()->folio.cerrar(" "));
+        assertThrows(ReglaDominioException.class,()->folio.cerrar());
         assertFalse(folio.estaCerrado());
-        folio.cerrar("Administrador autoriza cobro posterior");
+        assertTrue(folio.requiereAutorizacionParaCerrar());
+        AutorizacionCierre autorizacion=new AutorizacionCierre("admin@sieteraices.co","Cobro posterior acordado",
+                ReservasDePrueba.CREACION);
+        folio.cerrar(autorizacion);
         assertTrue(folio.estaCerrado());
-        assertEquals("Administrador autoriza cobro posterior",folio.getAutorizacionCierre());
+        assertEquals(autorizacion,folio.getAutorizacionCierre());
+        assertEquals("admin@sieteraices.co",folio.getAutorizacionCierre().autor());
         assertThrows(ReglaDominioException.class,()->folio.registrarPago(pago(1)));
         assertThrows(ReglaDominioException.class,()->folio.registrarCargo(cargo(TipoCargo.SERVICIO_ADICIONAL,1)));
     }
     @Test void cierreSinSaldoNoRequiereAutorizacion() {
-        folio.registrarPago(pago(200_000));folio.cerrar(null);assertTrue(folio.estaCerrado());
+        folio.registrarPago(pago(200_000));folio.cerrar();assertTrue(folio.estaCerrado());
+        assertNull(folio.getAutorizacionCierre());
     }
     @Test void cierreConSaldoAFavorTambienRequiereAutorizacion() {
-        folio.registrarPago(pago(250_000));assertThrows(ReglaDominioException.class,()->folio.cerrar(null));
+        folio.registrarPago(pago(250_000));assertThrows(ReglaDominioException.class,()->folio.cerrar());
     }
     @Test void liquidacionRevierteAlojamientoYAjustesPeroConservaExtras() {
         folio.registrarCargo(cargo(TipoCargo.AJUSTE_ALOJAMIENTO,-50_000));
@@ -71,8 +76,8 @@ class FolioTest {
     }
     @Test void pagoEsEntidadPorIdentidadAunqueSusDatosDifieran() {
         UUID id=UUID.randomUUID();
-        Pago a=new Pago(id,Dinero.de(1),"Efectivo",ReservasDePrueba.CREACION,"Pago","Ana");
-        Pago b=new Pago(id,Dinero.de(2),"Tarjeta",ReservasDePrueba.CREACION,"Pago","Luis");
+        Pago a=new Pago(id,Dinero.de(1),MedioPago.EFECTIVO,ReservasDePrueba.CREACION,"Pago","Ana");
+        Pago b=new Pago(id,Dinero.de(2),MedioPago.TARJETA_CREDITO,ReservasDePrueba.CREACION,"Pago","Luis");
         assertEquals(a,b);assertEquals(a.hashCode(),b.hashCode());
     }
 }

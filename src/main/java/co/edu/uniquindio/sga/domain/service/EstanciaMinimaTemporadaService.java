@@ -2,6 +2,7 @@ package co.edu.uniquindio.sga.domain.service;
 
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.repository.ConfiguracionAlojamiento;
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.valueobject.ValorCongelado;
 import java.util.Objects;
 
@@ -13,7 +14,7 @@ public final class EstanciaMinimaTemporadaService {
     }
     public void verificar(ValorCongelado valor) {
         if (valor == null) throw new ReglaDominioException("La estancia mínima requiere una cotización");
-        for (String temporada : valor.detalle().stream().map(c -> c.temporada()).distinct().toList()) {
+        for (TipoTemporada temporada : valor.detalle().stream().map(c -> c.temporada()).distinct().toList()) {
             int minimo = configuracion.nochesMinimasEnTemporada(temporada);
             if (minimo < 1) throw new ReglaDominioException("El mínimo de noches debe ser positivo");
             if (valor.noches() < minimo) {

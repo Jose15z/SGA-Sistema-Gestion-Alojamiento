@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.domain.entity;
 
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
 import co.edu.uniquindio.sga.domain.valueobject.CargoNoche;
@@ -226,7 +227,7 @@ class ReservaVencimientoTest {
         List<CargoNoche> detalle = estancia.nochesOcupadas().stream()
                 .map(noche -> new CargoNoche(
                         noche,
-                        "Normal",
+                        TipoTemporada.BASE,
                         Dinero.de(100_000),
                         1
                 ))

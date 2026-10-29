@@ -7,11 +7,14 @@ import co.edu.uniquindio.sga.domain.valueobject.Dinero;
 import co.edu.uniquindio.sga.domain.valueobject.Estancia;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.EventoReserva;
+import co.edu.uniquindio.sga.domain.valueobject.DocumentoIdentidad;
 import co.edu.uniquindio.sga.domain.valueobject.FechaCreacion;
+import co.edu.uniquindio.sga.domain.valueobject.IdentificadorExterno;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
 import co.edu.uniquindio.sga.domain.valueobject.PlazoConfirmacion;
 import co.edu.uniquindio.sga.domain.valueobject.UmbralEdadFacturable;
 import co.edu.uniquindio.sga.domain.valueobject.ValorCongelado;
+import co.edu.uniquindio.sga.domain.valueobject.Vehiculo;
 import co.edu.uniquindio.sga.domain.valueobject.VersionPolitica;
 
 import java.time.LocalDateTime;
@@ -22,6 +25,22 @@ import java.util.Objects;
 
 /**
  * Raíz del agregado Reserva.
+ *
+ * <p>Invariantes que protege el agregado por sí solo:</p>
+ * <ul>
+ *     <li>Nace PENDIENTE, con código, estancia, titular facturable incluido en el grupo,
+ *         valor y política congelados (RN-04, RN-06, RN-22).</li>
+ *     <li>Solo transita por los estados permitidos con métodos de negocio (RN-08):
+ *         confirmar exige hora estimada de llegada (RN-09), la llegada no ocurre antes
+ *         de la entrada (RN-10) y el no-show solo desde la hora límite configurada
+ *         sin novedad pendiente (L-15).</li>
+ *     <li>El historial es cronológico e inmutable; ningún evento retrocede en el tiempo.</li>
+ *     <li>Admite como máximo las mascotas (L-16) y los vehículos (RP-02) configurados.</li>
+ * </ul>
+ *
+ * <p>Condiciones que requieren coordinación con otros agregados (servicios de dominio):
+ * disponibilidad y solapamiento (RN-01, RN-07, RN-20), capacidad (RN-02), anticipo (L-11),
+ * retención (RN-13), cupos de parqueadero (RP-02) y unicidad externa (RN-19).</p>
  *
  * <p>Referencia al apartamento mediante su identificación.
  * Conserva la cotización, la versión de política aplicable
@@ -38,9 +57,9 @@ import java.util.Objects;
 public class Reserva {
 
     private final CodigoReserva codigo;
-    private final IdentificacionApartamento apartamento;
+    private IdentificacionApartamento apartamento;
     private final CanalOrigen canalOrigen;
-    private final String identificadorExterno;
+    private final IdentificadorExterno identificadorExterno;
     private final FechaCreacion fechaCreacion;
     private final Ocupante titular;
     private final VersionPolitica politica;
@@ -52,6 +71,8 @@ public class Reserva {
     private List<EventoReserva> historial;
     private LocalTime horaEstimadaLlegada;
     private String novedadLlegada;
+    private int mascotas;
+    private List<Vehiculo> vehiculos = List.of();
 
     private Reserva(
             CodigoReserva codigo,
@@ -60,7 +81,7 @@ public class Reserva {
             Ocupante titular,
             List<Ocupante> ocupantes,
             CanalOrigen canalOrigen,
-            String identificadorExterno,
+            IdentificadorExterno identificadorExterno,
             FechaCreacion fechaCreacion,
             ValorCongelado valor,
             VersionPolitica politica,
@@ -108,7 +129,7 @@ public class Reserva {
             Ocupante titular,
             List<Ocupante> ocupantes,
             CanalOrigen canalOrigen,
-            String identificadorExterno,
+            IdentificadorExterno identificadorExterno,
             UmbralEdadFacturable umbralEdadFacturable,
             ValorCongelado valor,
             VersionPolitica politica,
@@ -222,8 +243,7 @@ public class Reserva {
         }
 
         if (canalOrigen.exigeIdentificadorExterno()
-                && (identificadorExterno == null
-                || identificadorExterno.isBlank())) {
+                && identificadorExterno == null) {
             throw new ReglaDominioException(
                     "Una reserva externa debe indicar "
                             + "su identificador externo"
@@ -531,31 +551,175 @@ public class Reserva {
         historial = eventos;
     }
 
-    /** RN-14/22: modifica una reserva no iniciada con cotización validada y conserva la política. */
+    /** RN-14/22: cambia solo las fechas; equivale a {@link #modificar} con el mismo apartamento y grupo. */
     public Dinero modificarEstancia(
             Estancia nuevaEstancia, ValorCongelado nuevoValor, UmbralEdadFacturable umbral,
             String autor, LocalDateTime ahora) {
+        return modificar(apartamento, nuevaEstancia, ocupantes, nuevoValor, umbral, autor, ahora);
+    }
+
+    /**
+     * 7.5: cambia fechas, ocupantes o apartamento de una reserva PENDIENTE o CONFIRMADA
+     * que no ha iniciado. Las seis validaciones de creación las repite antes
+     * {@code ModificacionReservaService}; aquí se protegen las invariantes propias:
+     * el titular sigue en el grupo y es facturable, el valor corresponde a la nueva
+     * estancia y al grupo, y la política congelada no cambia.
+     *
+     * @return diferencia entre el nuevo valor y el anterior (ajuste del folio)
+     */
+    public Dinero modificar(
+            IdentificacionApartamento nuevoApartamento, Estancia nuevaEstancia, List<Ocupante> nuevosOcupantes,
+            ValorCongelado nuevoValor, UmbralEdadFacturable umbral, String autor, LocalDateTime ahora) {
         if (estado != EstadoReserva.PENDIENTE && estado != EstadoReserva.CONFIRMADA) {
             throw new ReglaDominioException("Solo se modifica una reserva pendiente o confirmada");
         }
-        if (nuevaEstancia == null || nuevoValor == null || umbral == null || ahora == null
-                || nuevaEstancia.fechaEntrada().isBefore(ahora.toLocalDate())
-                || !nuevoValor.correspondeA(nuevaEstancia)) {
+        if (nuevoApartamento == null || nuevaEstancia == null || nuevoValor == null || umbral == null
+                || ahora == null || nuevosOcupantes == null || nuevosOcupantes.isEmpty()
+                || nuevosOcupantes.stream().anyMatch(Objects::isNull)) {
+            throw new ReglaDominioException("La modificación requiere apartamento, estancia, grupo y valor");
+        }
+        if (estancia.fechaEntrada().isBefore(ahora.toLocalDate())) {
+            throw new ReglaDominioException("La reserva ya debía haber iniciado: no puede modificarse");
+        }
+        if (nuevaEstancia.fechaEntrada().isBefore(ahora.toLocalDate()) || !nuevoValor.correspondeA(nuevaEstancia)) {
             throw new ReglaDominioException("La modificación requiere estancia futura y desglose correspondiente");
         }
-        long facturables = ocupantes.stream().filter(o -> o.esFacturableEn(nuevaEstancia, umbral)).count();
+        List<Ocupante> grupo = List.copyOf(nuevosOcupantes);
+        if (grupo.stream().distinct().count() != grupo.size()) {
+            throw new ReglaDominioException("No se puede repetir un ocupante en la reserva");
+        }
+        if (!grupo.contains(titular)) {
+            throw new ReglaDominioException("El titular debe seguir siendo uno de los ocupantes");
+        }
+        long facturables = grupo.stream().filter(o -> o.esFacturableEn(nuevaEstancia, umbral)).count();
         if (!titular.esFacturableEn(nuevaEstancia, umbral)
                 || nuevoValor.detalle().stream().anyMatch(c -> c.ocupantesFacturables() != facturables)) {
             throw new ReglaDominioException("La nueva cotización no corresponde al grupo o su titular");
         }
         Dinero ajuste = nuevoValor.total().menos(valor.total());
+        StringBuilder cambios = new StringBuilder();
+        if (!nuevoApartamento.equals(apartamento)) {
+            cambios.append("Apartamento: ").append(apartamento.valor()).append(" -> ")
+                    .append(nuevoApartamento.valor()).append(" | ");
+        }
+        if (!nuevaEstancia.equals(estancia)) {
+            cambios.append("Nueva estancia: ").append(nuevaEstancia).append(" | ");
+        }
+        if (!grupo.equals(ocupantes)) {
+            cambios.append("Ocupantes: ").append(grupo.size()).append(" | ");
+        }
         List<EventoReserva> eventos = historialConEvento("MODIFICACION", autor, estado,
-                "Nueva estancia: " + nuevaEstancia + " | ajuste: " + ajuste.valor(), ahora);
+                cambios + "ajuste: " + ajuste.valor(), ahora);
+        apartamento = nuevoApartamento;
         estancia = nuevaEstancia;
+        ocupantes = grupo;
         valor = nuevoValor;
         historial = eventos;
         return ajuste;
     }
+
+    /**
+     * Reconstruye una reserva ya guardada, sin repetir las validaciones
+     * de creación (Guía 10). Solo la usan los adaptadores de persistencia.
+     */
+    public static Reserva reconstruir(
+            CodigoReserva codigo,
+            IdentificacionApartamento apartamento,
+            Estancia estancia,
+            Ocupante titular,
+            List<Ocupante> ocupantes,
+            CanalOrigen canalOrigen,
+            IdentificadorExterno identificadorExterno,
+            FechaCreacion fechaCreacion,
+            ValorCongelado valor,
+            VersionPolitica politica,
+            EstadoReserva estado,
+            List<EventoReserva> historial,
+            LocalTime horaEstimadaLlegada,
+            String novedadLlegada,
+            int mascotas,
+            List<Vehiculo> vehiculos
+    ) {
+        if (historial == null || historial.isEmpty()) {
+            throw new ReglaDominioException("Una reserva guardada debe conservar su historial");
+        }
+        Reserva reserva = new Reserva(codigo, apartamento, estancia, titular, ocupantes,
+                canalOrigen, identificadorExterno, fechaCreacion, valor, politica, historial.get(0));
+        reserva.estado = estado;
+        reserva.historial = List.copyOf(historial);
+        reserva.horaEstimadaLlegada = horaEstimadaLlegada;
+        reserva.novedadLlegada = novedadLlegada;
+        reserva.mascotas = mascotas;
+        reserva.vehiculos = List.copyOf(vehiculos);
+        return reserva;
+    }
+
+    /**
+     * L-16: registra cuántas mascotas acompañan al grupo.
+     *
+     * @param cantidad cantidad de mascotas
+     * @param maximoPermitido máximo configurado por el alojamiento
+     */
+    public void indicarMascotas(int cantidad, int maximoPermitido, String autor, LocalDateTime ahora) {
+        if (estado.esTerminal()) {
+            throw new ReglaDominioException("No se pueden indicar mascotas en una reserva terminada");
+        }
+        if (cantidad < 0) {
+            throw new ReglaDominioException("La cantidad de mascotas no puede ser negativa");
+        }
+        if (cantidad > maximoPermitido) {
+            throw new ReglaDominioException(
+                    "La reserva admite como máximo " + maximoPermitido + " mascota(s)");
+        }
+        List<EventoReserva> eventos = historialConEvento("MASCOTAS", autor, estado,
+                "Mascotas: " + cantidad, ahora);
+        mascotas = cantidad;
+        historial = eventos;
+    }
+
+    /**
+     * RP-02: el siguiente vehículo que se registre generaría cargo
+     * porque supera los cupos incluidos en la reserva.
+     */
+    public boolean siguienteVehiculoEsAdicional(int vehiculosIncluidos) {
+        return vehiculos.size() >= vehiculosIncluidos;
+    }
+
+    /**
+     * RP-02: asocia un vehículo a una reserva activa, sin repetir placas
+     * ni superar el máximo configurado. La disponibilidad de cupos del
+     * parqueadero se coordina con {@code DisponibilidadParqueaderoService}.
+     */
+    public void registrarVehiculo(Vehiculo vehiculo, int maximoPorReserva, String autor, LocalDateTime ahora) {
+        if (!estado.esActiva()) {
+            throw new ReglaDominioException("Solo una reserva activa puede registrar vehículos");
+        }
+        if (vehiculo == null) {
+            throw new ReglaDominioException("El vehículo es obligatorio");
+        }
+        if (vehiculos.contains(vehiculo)) {
+            throw new ReglaDominioException("El vehículo " + vehiculo.placa() + " ya está registrado en la reserva");
+        }
+        if (vehiculos.size() >= maximoPorReserva) {
+            throw new ReglaDominioException(
+                    "La reserva admite como máximo " + maximoPorReserva + " vehículos");
+        }
+        List<EventoReserva> eventos = historialConEvento("VEHICULO", autor, estado,
+                "Vehículo registrado: " + vehiculo.placa(), ahora);
+        List<Vehiculo> nuevos = new ArrayList<>(vehiculos);
+        nuevos.add(vehiculo);
+        vehiculos = List.copyOf(nuevos);
+        historial = eventos;
+    }
+
+    /** Propietario: el titular de la reserva se identifica por su documento. */
+    public boolean perteneceA(DocumentoIdentidad documento) {
+        return documento != null && titular.getDocumento().equals(documento);
+    }
+
+    public int getMascotas() { return mascotas; }
+
+    public List<Vehiculo> getVehiculos() { return vehiculos; }
 
     public String getNovedadLlegada() { return novedadLlegada; }
 
@@ -623,7 +787,7 @@ public class Reserva {
         return canalOrigen;
     }
 
-    public String getIdentificadorExterno() {
+    public IdentificadorExterno getIdentificadorExterno() {
         return identificadorExterno;
     }
 

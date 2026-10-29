@@ -2,8 +2,9 @@ package co.edu.uniquindio.sga.domain.entity;
 import co.edu.uniquindio.sga.ReservasDePrueba;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.valueobject.*;
-import co.edu.uniquindio.sga.infrastructure.configuration.ParametrosAlojamiento;
-import co.edu.uniquindio.sga.infrastructure.repository.memory.PoliticaCancelacionRepositoryEnMemoria;
+import co.edu.uniquindio.sga.ParametrosDePrueba;
+import co.edu.uniquindio.sga.infrastructure.config.ParametrosAlojamiento;
+import co.edu.uniquindio.sga.infrastructure.persistence.inmemory.PoliticaCancelacionRepositoryEnMemoria;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -15,13 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class PoliticaCancelacionTest {
     @ParameterizedTest @CsvSource({"604800,0","604799,60000","172800,60000","172799,100000","0,100000","-1,100000"})
     void limitesEnSegundos(long anticipacion,long esperado) {
-        var politica=ParametrosAlojamiento.politicaInicialSieteRaices();
+        var politica=ParametrosDePrueba.politicaInicialSieteRaices();
         Dinero valor=politica.retencionPorCancelacion(Dinero.de(200_000),ReservasDePrueba.pendiente().getEstancia(),
                 ReservasDePrueba.LLEGADA.minusSeconds(anticipacion));
         assertEquals(Dinero.de(esperado),valor);
     }
     @Test void redondeaUnaSolaVezAlPeso() {
-        assertEquals(Dinero.de(51),ParametrosAlojamiento.politicaInicialSieteRaices().retencionPorNoShow(Dinero.de(101)));
+        assertEquals(Dinero.de(51),ParametrosDePrueba.politicaInicialSieteRaices().retencionPorNoShow(Dinero.de(101)));
     }
     @Test void rechazaHuecosEnTramos() {
         assertThrows(ReglaDominioException.class,()->new PoliticaCancelacion(new VersionPolitica(1),
@@ -33,7 +34,7 @@ class PoliticaCancelacionTest {
                 BigDecimal.TEN,LocalTime.NOON));
     }
     @Test void noPermiteReescribirVersionHistorica() {
-        var politica=ParametrosAlojamiento.politicaInicialSieteRaices();
+        var politica=ParametrosDePrueba.politicaInicialSieteRaices();
         var repo=new PoliticaCancelacionRepositoryEnMemoria(politica);
         assertThrows(IllegalArgumentException.class,()->repo.publicar(politica));
         assertSame(politica,repo.obtenerPorVersion(new VersionPolitica(1)).orElseThrow());

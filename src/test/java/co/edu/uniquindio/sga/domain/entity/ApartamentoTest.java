@@ -1,6 +1,14 @@
 package co.edu.uniquindio.sga.domain.entity;
 
+import co.edu.uniquindio.sga.EscenarioReservas;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
+import co.edu.uniquindio.sga.domain.valueobject.Dinero;
+import co.edu.uniquindio.sga.domain.valueobject.GravedadNovedad;
+import co.edu.uniquindio.sga.domain.valueobject.NovedadApartamento;
+import co.edu.uniquindio.sga.domain.valueobject.Tarifa;
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
+import java.time.LocalDateTime;
+import java.util.List;
 import co.edu.uniquindio.sga.domain.valueobject.Capacidad;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoOperativo;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
@@ -25,12 +33,7 @@ class ApartamentoTest {
     void apartamentosConLaMismaIdentificacionDebenSerIguales() {
         Apartamento primero = apartamento();
 
-        Apartamento segundo = new Apartamento(
-                new IdentificacionApartamento("APT-301"),
-                "Otro nombre",
-                3,
-                new Capacidad(6)
-        );
+        Apartamento segundo = EscenarioReservas.apartamento("APT-301", "Otro nombre", 3, 6);
         segundo.declararFueraDeServicio();
 
         assertEquals(primero, segundo);
@@ -41,12 +44,7 @@ class ApartamentoTest {
     void apartamentosConIdentificacionesDistintasNoDebenSerIguales() {
         Apartamento primero = apartamento();
 
-        Apartamento segundo = new Apartamento(
-                new IdentificacionApartamento("APT-302"),
-                "Balcón",
-                2,
-                new Capacidad(4)
-        );
+        Apartamento segundo = EscenarioReservas.apartamento("APT-302", "Balcón", 2, 4);
 
         assertNotEquals(primero, segundo);
     }
@@ -333,13 +331,64 @@ class ApartamentoTest {
         );
     }
 
+    @Test
+    void noDebeRegistrarseActivoSinTarifasEnTodasLasTemporadas() {
+        IdentificacionApartamento id = new IdentificacionApartamento("APT-999");
+        List<Tarifa> incompletas = List.of(new Tarifa(id, TipoTemporada.BASE, Dinero.de(70_000)),
+                new Tarifa(id, TipoTemporada.ALTA, Dinero.de(80_000)));
+
+        assertThrows(ReglaDominioException.class,
+                () -> new Apartamento(id, "Sin especial", "", 1, new Capacidad(2), List.of(), incompletas,
+                        LocalDateTime.of(2026, 1, 1, 8, 0)));
+    }
+
+    @Test
+    void noDebeAceptarTarifasDeOtroApartamento() {
+        IdentificacionApartamento id = new IdentificacionApartamento("APT-999");
+        IdentificacionApartamento otro = new IdentificacionApartamento("APT-998");
+        List<Tarifa> tarifas = List.of(new Tarifa(id, TipoTemporada.BASE, Dinero.de(70_000)),
+                new Tarifa(id, TipoTemporada.ALTA, Dinero.de(80_000)),
+                new Tarifa(otro, TipoTemporada.ESPECIAL, Dinero.de(90_000)));
+
+        assertThrows(ReglaDominioException.class,
+                () -> new Apartamento(id, "Mezclado", "", 1, new Capacidad(2), List.of(), tarifas,
+                        LocalDateTime.of(2026, 1, 1, 8, 0)));
+    }
+
+    @Test
+    void actualizarTarifaReemplazaElValorDeLaTemporada() {
+        Apartamento apartamento = apartamento();
+
+        int registrosPrevios = apartamento.getHistorialTarifas().size();
+        apartamento.actualizarTarifa(TipoTemporada.ALTA, Dinero.de(95_000), LocalDateTime.of(2030, 6, 1, 9, 0));
+
+        assertEquals(Dinero.de(95_000), apartamento.tarifaPara(TipoTemporada.ALTA).valorPorOcupanteNoche());
+        assertTrue(apartamento.tieneTarifasCompletas());
+        assertEquals(registrosPrevios + 1, apartamento.getHistorialTarifas().size());
+        assertEquals(Dinero.de(95_000), apartamento.getHistorialTarifas().getFirst().valor());
+    }
+
+    @Test
+    void reactivarDevuelveALaVentaUnApartamentoRetirado() {
+        Apartamento apartamento = apartamento();
+        apartamento.desactivar();
+
+        apartamento.reactivar();
+
+        assertTrue(apartamento.estaActivo());
+        assertThrows(ReglaDominioException.class, apartamento::reactivar);
+    }
+
+    @Test
+    void noDebeRetirarDosVecesElMismoApartamento() {
+        Apartamento apartamento = apartamento();
+        apartamento.desactivar();
+
+        assertThrows(ReglaDominioException.class, apartamento::desactivar);
+    }
+
     private Apartamento apartamento() {
-        return new Apartamento(
-                new IdentificacionApartamento("APT-301"),
-                "Balcón",
-                2,
-                new Capacidad(4)
-        );
+        return EscenarioReservas.apartamento("APT-301", "Balcón", 2, 4);
     }
 
     private Apartamento pendienteDePreparacion() {
@@ -347,5 +396,31 @@ class ApartamentoTest {
         apartamento.marcarOcupado();
         apartamento.liberar();
         return apartamento;
+    }
+
+    @Test
+    void actualizarDatosConservaCaracteristicasSinVaciosNiRepetidos() {
+        Apartamento apartamento = apartamento();
+
+        apartamento.actualizarDatos("Orquídea", "Vista al jardín", 2, List.of("Wifi", " Balcón ", "Wifi"));
+
+        assertEquals(List.of("Wifi", "Balcón"), apartamento.getCaracteristicas());
+        assertTrue(apartamento.tieneCaracteristicas(List.of("balcón")));
+        assertFalse(apartamento.tieneCaracteristicas(List.of("Jacuzzi")));
+        assertThrows(ReglaDominioException.class,
+                () -> apartamento.actualizarDatos("Orquídea", "", 2, List.of(" ")));
+    }
+
+    @Test
+    void lasNovedadesSeListanDeLaMasRecienteALaMasAntigua() {
+        Apartamento apartamento = apartamento();
+        apartamento.registrarNovedad(new NovedadApartamento(LocalDateTime.of(2026, 5, 1, 10, 0), "servicio",
+                "Bombillo fundido", GravedadNovedad.LEVE));
+        apartamento.registrarNovedad(new NovedadApartamento(LocalDateTime.of(2026, 5, 2, 10, 0), "servicio",
+                "Fuga en la ducha", GravedadNovedad.GRAVE));
+
+        assertEquals(GravedadNovedad.GRAVE, apartamento.getNovedades().getFirst().gravedad());
+        assertThrows(ReglaDominioException.class, () -> new NovedadApartamento(LocalDateTime.now(), " ",
+                "Sin autor", GravedadNovedad.LEVE));
     }
 }

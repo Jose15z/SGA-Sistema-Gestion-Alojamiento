@@ -22,7 +22,7 @@ import java.time.LocalDate;
  */
 public record CargoNoche(
         LocalDate noche,
-        String temporada,
+        TipoTemporada temporada,
         Dinero tarifaPorOcupante,
         int ocupantesFacturables
 ) {
@@ -48,7 +48,7 @@ public record CargoNoche(
             );
         }
 
-        if (temporada == null || temporada.isBlank()) {
+        if (temporada == null) {
             throw new ReglaDominioException(
                     "Toda noche liquidada debe indicar su temporada"
             );
@@ -73,7 +73,6 @@ public record CargoNoche(
             );
         }
 
-        temporada = temporada.trim();
     }
 
     /**

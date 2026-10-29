@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.domain.valueobject;
 
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import org.junit.jupiter.api.Test;
 
@@ -25,13 +26,13 @@ class TarifaTest {
     void tarifasConLosMismosValoresDebenSerIguales() {
         Tarifa primera = new Tarifa(
                 APARTAMENTO,
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(100_000)
         );
 
         Tarifa segunda = new Tarifa(
                 new IdentificacionApartamento("APT-301"),
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(100_000)
         );
 
@@ -43,13 +44,13 @@ class TarifaTest {
     void tarifasDeApartamentosDistintosNoDebenSerIguales() {
         Tarifa primera = new Tarifa(
                 APARTAMENTO,
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(100_000)
         );
 
         Tarifa segunda = new Tarifa(
                 new IdentificacionApartamento("APT-302"),
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(100_000)
         );
 
@@ -60,13 +61,13 @@ class TarifaTest {
     void tarifasDeTemporadasDistintasNoDebenSerIguales() {
         Tarifa normal = new Tarifa(
                 APARTAMENTO,
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(100_000)
         );
 
         Tarifa especial = new Tarifa(
                 APARTAMENTO,
-                "Especial",
+                TipoTemporada.ESPECIAL,
                 Dinero.de(100_000)
         );
 
@@ -77,42 +78,26 @@ class TarifaTest {
     void tarifasConImportesDistintosNoDebenSerIguales() {
         Tarifa primera = new Tarifa(
                 APARTAMENTO,
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(100_000)
         );
 
         Tarifa segunda = new Tarifa(
                 APARTAMENTO,
-                "Normal",
+                TipoTemporada.BASE,
                 Dinero.de(150_000)
         );
 
         assertNotEquals(primera, segunda);
     }
 
-    @Test
-    void debeNormalizarLosEspaciosDeLaTemporada() {
-        Tarifa conEspacios = new Tarifa(
-                APARTAMENTO,
-                "  Especial  ",
-                Dinero.de(100_000)
-        );
-
-        Tarifa sinEspacios = new Tarifa(
-                APARTAMENTO,
-                "Especial",
-                Dinero.de(100_000)
-        );
-
-        assertEquals(sinEspacios, conEspacios);
-    }
 
     @Test
     void debeAceptarUnImporteDeCero() {
         assertDoesNotThrow(
                 () -> new Tarifa(
                         APARTAMENTO,
-                        "Normal",
+                        TipoTemporada.BASE,
                         Dinero.CERO
                 )
         );
@@ -124,7 +109,7 @@ class TarifaTest {
                 ReglaDominioException.class,
                 () -> new Tarifa(
                         null,
-                        "Normal",
+                        TipoTemporada.BASE,
                         Dinero.de(100_000)
                 )
         );
@@ -142,29 +127,7 @@ class TarifaTest {
         );
     }
 
-    @Test
-    void debeRechazarUnaTemporadaVacia() {
-        assertThrows(
-                ReglaDominioException.class,
-                () -> new Tarifa(
-                        APARTAMENTO,
-                        "",
-                        Dinero.de(100_000)
-                )
-        );
-    }
 
-    @Test
-    void debeRechazarUnaTemporadaCompuestaSoloPorEspacios() {
-        assertThrows(
-                ReglaDominioException.class,
-                () -> new Tarifa(
-                        APARTAMENTO,
-                        "   ",
-                        Dinero.de(100_000)
-                )
-        );
-    }
 
     @Test
     void debeRechazarUnImporteNulo() {
@@ -172,7 +135,7 @@ class TarifaTest {
                 ReglaDominioException.class,
                 () -> new Tarifa(
                         APARTAMENTO,
-                        "Normal",
+                        TipoTemporada.BASE,
                         null
                 )
         );
@@ -184,7 +147,7 @@ class TarifaTest {
                 ReglaDominioException.class,
                 () -> new Tarifa(
                         APARTAMENTO,
-                        "Normal",
+                        TipoTemporada.BASE,
                         Dinero.de(-1)
                 )
         );

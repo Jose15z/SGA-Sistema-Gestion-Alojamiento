@@ -20,7 +20,7 @@ public final class ReservasDePrueba {
                 LocalDate.of(1990, 1, 1), CREACION.toLocalDate());
         Estancia estancia = new Estancia(LLEGADA.toLocalDate(), LLEGADA.toLocalDate().plusDays(2));
         ValorCongelado valor = new ValorCongelado(estancia.nochesOcupadas().stream()
-                .map(noche -> new CargoNoche(noche, "Normal", Dinero.de(100_000), 1)).toList());
+                .map(noche -> new CargoNoche(noche, TipoTemporada.BASE, Dinero.de(100_000), 1)).toList());
         return Reserva.crear(new CodigoReserva("RES-2026-00001"),
                 new IdentificacionApartamento("APT-301"), estancia, titular, List.of(titular),
                 CanalOrigen.DIRECTO, null, new UmbralEdadFacturable(10), valor,

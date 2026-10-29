@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.domain.entity;
 
+import co.edu.uniquindio.sga.domain.valueobject.TipoTemporada;
 import co.edu.uniquindio.sga.domain.exception.ReglaDominioException;
 import co.edu.uniquindio.sga.domain.valueobject.CanalOrigen;
 import co.edu.uniquindio.sga.domain.valueobject.CargoNoche;
@@ -10,6 +11,7 @@ import co.edu.uniquindio.sga.domain.valueobject.Estancia;
 import co.edu.uniquindio.sga.domain.valueobject.EstadoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.EventoReserva;
 import co.edu.uniquindio.sga.domain.valueobject.IdentificacionApartamento;
+import co.edu.uniquindio.sga.domain.valueobject.IdentificadorExterno;
 import co.edu.uniquindio.sga.domain.valueobject.UmbralEdadFacturable;
 import co.edu.uniquindio.sga.domain.valueobject.ValorCongelado;
 import co.edu.uniquindio.sga.domain.valueobject.VersionPolitica;
@@ -326,7 +328,7 @@ class ReservaTest {
                 cotizacion(ESTANCIA, 1), POLITICA
         );
 
-        assertEquals("Ext-Ab123", reserva.getIdentificadorExterno());
+        assertEquals("Ext-Ab123", reserva.getIdentificadorExterno().valor());
         assertEquals(CanalOrigen.EXTERNO, reserva.getCanalOrigen());
     }
 
@@ -357,7 +359,7 @@ class ReservaTest {
                 titular,
                 grupo,
                 canal,
-                identificadorExterno,
+                identificadorExterno == null ? null : new IdentificadorExterno(identificadorExterno),
                 new UmbralEdadFacturable(10),
                 valor,
                 politica,
@@ -382,7 +384,7 @@ class ReservaTest {
         List<CargoNoche> detalle = estancia.nochesOcupadas().stream()
                 .map(noche -> new CargoNoche(
                         noche,
-                        "Normal",
+                        TipoTemporada.BASE,
                         Dinero.de(100_000),
                         facturables
                 ))

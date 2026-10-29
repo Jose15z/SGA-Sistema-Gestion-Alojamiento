@@ -22,6 +22,15 @@ public final class Bloqueo {
         this.periodo = periodo;
         this.motivo = motivo.trim();
     }
+    /** Reconstruye un bloqueo guardado (Guía 10). */
+    public static Bloqueo reconstruir(UUID identificacion, IdentificacionApartamento apartamento, Estancia periodo,
+                                      String motivo, boolean vigente, String motivoLevantamiento) {
+        Bloqueo bloqueo = new Bloqueo(identificacion, apartamento, periodo, motivo);
+        bloqueo.vigente = vigente;
+        bloqueo.motivoLevantamiento = motivoLevantamiento;
+        return bloqueo;
+    }
+
     public boolean afecta(Estancia estancia) {
         if (estancia == null) throw new ReglaDominioException("La estancia es obligatoria");
         return vigente && periodo.seSolapaCon(estancia);
