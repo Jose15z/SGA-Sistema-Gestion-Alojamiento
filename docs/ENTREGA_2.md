@@ -29,7 +29,7 @@ Después de una revisión contra el enunciado se cerraron estas brechas:
 | 7.7 Folio | El cierre con saldo distinto de cero lo **autoriza solo el administrador** y queda registrado con **autor, motivo y momento** (`AutorizacionCierre`); los servicios del catálogo se cargan con su valor (L-17). |
 | 12.3 Datos de prueba | Un usuario por rol, reservas en los seis estados y en los tres canales, un bloqueo vigente, un apartamento FUERA_DE_SERVICIO, el alojamiento con servicios e histórico de tarifas. |
 
-Estos ajustes no cambian lo comprometido en la Entrega 1: se conservan los ocho casos de uso del diagrama con sus nombres (incluido `ConsultarReservasPorEstadoUseCase`), las reglas RN-02, RN-03, RN-04 y RN-06 en el mismo lugar del modelo (`Apartamento.admite`, constructor de `Estancia`, `Reserva.crear`, `Ocupante.esFacturableEn`), el solapamiento en `Estancia.seSolapaCon`, las reglas propias RP-01 a RP-03 y los valores de la Ficha del Alojamiento: tarifas vigentes (A.3), umbral de 10 años, horarios 15:00 y 11:00, 3 horas de preparación, 24 horas de plazo, anticipo del 30 %, máximo 1 mascota, tramos de cancelación 0 % / 30 % / 50 %, no-show del 50 % (a las 20:00, según la corrección del profesor), medios de pago y servicios adicionales con su cargo (lavandería $25.000 por solicitud, desayuno $25.000 por persona y parqueadero adicional $20.000 por noche vía RP-02). Las descripciones y características de los apartamentos son las de la Ficha (A.2). Lo único que no viene en la Ficha (dirección exacta, coordenadas y normas de convivencia) está marcado en `data.sql` como dato de ejemplo.
+Estos ajustes no cambian lo comprometido en la Entrega 1: se conservan los ocho casos de uso del diagrama con sus nombres (incluido `ConsultarReservasPorEstadoUseCase`), las reglas RN-02, RN-03, RN-04 y RN-06 en el mismo lugar del modelo (`Apartamento.admite`, constructor de `Estancia`, `Reserva.crear`, `Ocupante.esFacturableEn`), el solapamiento en `Estancia.seSolapaCon`, las reglas propias RP-01 a RP-03 y los valores de la Ficha del Alojamiento: tarifas vigentes (A.3), umbral de 10 años, horarios 15:00 y 11:00, 3 horas de preparación, 24 horas de plazo, anticipo del 30 %, máximo 1 mascota, tramos de cancelación 0 % / 30 % / 50 %, no-show del 50 % (a las 20:00, según la corrección del profesor), medios de pago y servicios adicionales con su cargo (lavandería $25.000 por solicitud, desayuno $25.000 por persona y parqueadero adicional $20.000 por noche vía RP-02). Las descripciones y características de los apartamentos son las de la Ficha (A.2). Las cinco normas de convivencia de la Ficha (A.4) se cargan al iniciar. Lo único que no viene en la Ficha (dirección exacta y coordenadas) está marcado en `data.sql` como dato de ejemplo.
 
 Quedan para los cortes siguientes, porque dependen de integraciones externas: imágenes en servicio externo, foto de perfil, canales de venta con credencial y bitácora (7.8), notificaciones al titular y reportes (7.9).
 
@@ -225,6 +225,24 @@ Luego, con la aplicación recién arrancada, importar la colección en Postman y
 npx newman run docs/pruebas/SGA-Entrega2.postman_collection.json
 ```
 
-Resultado verificado: 457 pruebas de JUnit sin fallos, y 179 solicitudes con 334 aserciones de Newman sin fallos sobre una aplicación recién arrancada.
+Resultado verificado el 31 de octubre de 2026: 489 pruebas de JUnit sin fallos (26 nuevas con Mockito para crear, cancelar, modificar, salida, no-show y vencimiento, más seis de contrato y validación HTTP), y 179 solicitudes con 334 aserciones de Newman sin fallos sobre una aplicación recién arrancada.
+
+El [plan de cierre](PLAN_CIERRE_ENTREGA_2.md) registra la revisión de la rúbrica, los datos pendientes y la propuesta de reparto para el equipo.
 
 En local, el código de recuperación de contraseña aparece en la consola de la aplicación (`[correo local] ... Código de recuperación: NNNNNN`).
+
+El [contraste con la Entrega 1](REVISION_ENTREGA_1.md) relaciona los 31 conceptos y los 12 servicios del Excel local con las clases actuales y explica los cambios de firma y nombre. Debe confirmarse que ese catálogo sea la versión definitiva, ya que la retroalimentación menciona trece servicios.
+
+### Revisión adicional del contrato y Swagger
+
+`ContratoOpenApiTest` verifica métodos y rutas, nombres de campos de los DTOs,
+valores de los enums y presencia de los campos obligatorios de los requests.
+También comprueba que Swagger no pida `solicitante`: el servidor lo obtiene del
+JWT. Se corrigió su aparición en los tres endpoints del perfil.
+
+Los requests de alta/edición de apartamento, cambio de capacidad, servicio de
+folio, servicio del catálogo y tramo de política usan envoltorios con `@NotNull`
+para los campos obligatorios numéricos y booleanos. Así, un dato ausente no se
+transforma silenciosamente en 0 o false. Las dos regresiones HTTP comprueban
+400 al omitir `generaCargo` o `antelacionMinimaHoras`. El contrato ya declaraba
+esos campos obligatorios, por lo que esta corrección alinea la implementación.
