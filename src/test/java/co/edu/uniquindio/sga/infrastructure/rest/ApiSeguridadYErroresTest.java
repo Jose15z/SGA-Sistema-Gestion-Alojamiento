@@ -13,6 +13,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 
 /**
  * Recorrido HTTP real (seguridad, controller, caso de uso, dominio y H2 con data.sql):
@@ -114,5 +116,31 @@ class ApiSeguridadYErroresTest {
                                 token("recepcion@sieteraices.co", "Recepcion123*"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"Saldo pendiente\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void servicioSinIndicadorDeCargoResponde400EnLugarDeAsumirFalse() throws Exception {
+        mockMvc.perform(put("/api/alojamiento").header("Authorization", token("admin@sieteraices.co", "Admin123*"))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"nombre":"Siete Raíces","descripcion":"Prueba de forma",
+                                 "ciudad":"Armenia","direccion":"Dirección de prueba",
+                                 "latitud":4.53,"longitud":-75.68,"normas":[],
+                                 "servicios":[{"codigo":"WIFI","nombre":"Wifi","valor":0,"unidad":"POR_SOLICITUD"}]}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"))
+                .andExpect(jsonPath("$.detalles", hasItem(containsString("generaCargo"))));
+    }
+
+    @Test
+    void tramoSinAntelacionResponde400EnLugarDeAsumirCero() throws Exception {
+        mockMvc.perform(post("/api/politicas-cancelacion")
+                        .header("Authorization", token("admin@sieteraices.co", "Admin123*"))
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                                {"tramos":[{"porcentaje":50}],"porcentajeNoShow":50,"horaEntrada":"15:00"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"))
+                .andExpect(jsonPath("$.detalles", hasItem(containsString("antelacionMinimaHoras"))));
     }
 }

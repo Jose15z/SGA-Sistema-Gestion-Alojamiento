@@ -8,6 +8,7 @@ import co.edu.uniquindio.sga.application.dto.response.PaginaResponse;
 import co.edu.uniquindio.sga.application.dto.response.UsuarioResponse;
 import co.edu.uniquindio.sga.application.seguridad.CorreoElectronico;
 import co.edu.uniquindio.sga.application.seguridad.Solicitante;
+import io.swagger.v3.oas.annotations.Parameter;
 import co.edu.uniquindio.sga.application.seguridad.Usuario;
 import co.edu.uniquindio.sga.application.usecase.ActualizarPerfilUseCase;
 import co.edu.uniquindio.sga.application.usecase.AsignarRolUseCase;
@@ -70,20 +71,20 @@ public class UsuarioController {
     }
 
     @GetMapping("/yo")
-    public ResponseEntity<UsuarioResponse> consultarPerfil(Solicitante solicitante) {
+    public ResponseEntity<UsuarioResponse> consultarPerfil(@Parameter(hidden = true) Solicitante solicitante) {
         return ResponseEntity.ok(mapper.toResponse(consultarPerfil.ejecutar(solicitante)));
     }
 
     @PutMapping("/yo")
     public ResponseEntity<UsuarioResponse> actualizarPerfil(@Valid @RequestBody ActualizarPerfilRequest request,
-                                                            Solicitante solicitante) {
+                                                            @Parameter(hidden = true) Solicitante solicitante) {
         return ResponseEntity.ok(mapper.toResponse(
                 actualizarPerfil.ejecutar(request.nombreCompleto(), request.telefono(), solicitante)));
     }
 
     @PutMapping("/yo/contrasena")
     public ResponseEntity<Void> cambiarContrasena(@Valid @RequestBody CambiarContrasenaRequest request,
-                                                  Solicitante solicitante) {
+                                                  @Parameter(hidden = true) Solicitante solicitante) {
         cambiarContrasena.ejecutar(request.contrasenaActual(), request.contrasenaNueva(), solicitante);
         return ResponseEntity.noContent().build();
     }

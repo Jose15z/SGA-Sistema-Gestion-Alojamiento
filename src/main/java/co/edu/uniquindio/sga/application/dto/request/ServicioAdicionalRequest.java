@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 public record ServicioAdicionalRequest(
         @NotBlank @Pattern(regexp = "^[A-Z][A-Z0-9_]{1,29}$", message = "debe usar mayúsculas, números o _") String codigo,
         @NotBlank @Size(max = 80) String nombre,
-        boolean generaCargo,
+        @NotNull Boolean generaCargo,
         @NotNull @PositiveOrZero Long valor,
         @NotNull UnidadCobro unidad
 ) {
