@@ -11,7 +11,7 @@ import java.util.List;
 
 /** Nueva versión de la política de cancelación (L-10). */
 public record PublicarPoliticaRequest(
-        @NotEmpty List<@Valid TramoCancelacionRequest> tramos,
+        @NotEmpty List<@NotNull @Valid TramoCancelacionRequest> tramos,
         @NotNull @DecimalMin("0") @DecimalMax("100") BigDecimal porcentajeNoShow,
         @NotNull LocalTime horaEntrada
 ) {

@@ -11,7 +11,7 @@ import java.util.List;
 public record ActualizarApartamentoRequest(
         @NotBlank @Size(max = 80) String nombre,
         @NotNull @Size(max = 1000) String descripcion,
-        @Min(1) int dormitorios,
+        @NotNull @Min(1) Integer dormitorios,
         @NotNull @Size(max = 20) List<@NotBlank @Size(max = 80) String> caracteristicas
 ) {
 }

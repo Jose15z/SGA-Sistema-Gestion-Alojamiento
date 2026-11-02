@@ -4,6 +4,9 @@ Proyecto de **Programación Avanzada** (Ingeniería de Sistemas y Computación, 
 
 | Documento | Contenido |
 |---|---|
+| [docs/RESUMEN_ENTREGA_2.md](docs/RESUMEN_ENTREGA_2.md) | Resumen funcional de la entrega, aportes de José y estado de las ramas |
+| [docs/PLAN_CIERRE_ENTREGA_2.md](docs/PLAN_CIERRE_ENTREGA_2.md) | Revisión de la rúbrica, verificaciones y pendientes para cerrar la entrega |
+| [docs/REVISION_ENTREGA_1.md](docs/REVISION_ENTREGA_1.md) | Correspondencia de los conceptos y servicios del Excel original con el código actual |
 | [docs/ENTREGA_2.md](docs/ENTREGA_2.md) | Lo implementado en la Entrega 2: correcciones de la sustentación, invariantes por agregado, casos de uso, matriz de trazabilidad ampliada con endpoints, matriz de roles y recorrido completo de una reserva |
 | [docs/api/openapi.yaml](docs/api/openapi.yaml) | Contrato de la API (lo verifica `ContratoOpenApiTest`) |
 | [docs/pruebas/SGA-Entrega2.postman_collection.json](docs/pruebas/SGA-Entrega2.postman_collection.json) | Colección de pruebas de la sustentación |

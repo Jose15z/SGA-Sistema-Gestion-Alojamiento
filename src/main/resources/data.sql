@@ -19,8 +19,9 @@ INSERT INTO usuarios (identificacion, correo, documento, fecha_nacimiento, nombr
 
 -- ---------------------------------------------------------------------
 -- Alojamiento (7.3): identidad de la Ficha (A.1) y servicios adicionales con
--- el cargo de la Ficha (A.5, L-17). La dirección, la ubicación y las normas no
--- están en la Ficha: son datos de ejemplo que el equipo puede ajustar.
+-- el cargo de la Ficha (A.5, L-17) y sus cinco normas de convivencia (A.4).
+-- Solo la dirección exacta y las coordenadas siguen siendo datos de ejemplo
+-- pendientes de confirmar por el equipo; no aparecen en la Ficha.
 -- El parqueadero adicional no está en este catálogo porque lo cobra RP-02
 -- al registrar el segundo vehículo.
 -- ---------------------------------------------------------------------
@@ -30,9 +31,11 @@ INSERT INTO alojamiento (identificacion, nombre, descripcion, ciudad, direccion,
  'Armenia, Quindío', 'Armenia, Quindío (dirección de ejemplo)', 4.533900, -75.681100);
 
 INSERT INTO alojamiento_normas (alojamiento_id, posicion, norma) VALUES
-('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 0, 'Silencio entre las 22:00 y las 7:00'),
-('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 1, 'No se permite fumar dentro de los apartamentos'),
-('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 2, 'Las mascotas deben permanecer con su dueño en las zonas comunes');
+('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 0, 'No se permite superar la capacidad máxima establecida para cada apartamento.'),
+('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 1, 'Se debe mantener un nivel de ruido moderado, especialmente entre las 10:00 p. m. y las 7:00 a. m., con el fin de preservar el descanso de los demás huéspedes.'),
+('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 2, 'No está permitido fumar dentro de los apartamentos ni en espacios interiores compartidos.'),
+('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 3, 'Los huéspedes deben hacer uso adecuado del mobiliario, equipos y demás elementos del apartamento y reportar cualquier daño o novedad presentada durante la estancia.'),
+('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 4, 'Se permite máximo una mascota por reserva, bajo la responsabilidad del titular y respetando las condiciones de convivencia del alojamiento.');
 
 INSERT INTO alojamiento_servicios (alojamiento_id, posicion, codigo, nombre, genera_cargo, valor, unidad) VALUES
 ('3c4d5e6f-7a8b-4c9d-8e0f-000000000001', 0, 'LAVANDERIA', 'Servicio de lavandería', TRUE, 25000, 'POR_SOLICITUD'),

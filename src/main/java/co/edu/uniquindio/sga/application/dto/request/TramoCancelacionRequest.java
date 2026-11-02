@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 /** Tramo de la política: desde cuántas horas de antelación aplica el porcentaje. */
 public record TramoCancelacionRequest(
-        @PositiveOrZero long antelacionMinimaHoras,
+        @NotNull @PositiveOrZero Long antelacionMinimaHoras,
         @NotNull @DecimalMin("0") @DecimalMax("100") BigDecimal porcentaje
 ) {
 }

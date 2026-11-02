@@ -1,6 +1,7 @@
 package co.edu.uniquindio.sga.application.dto.request;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -16,6 +17,6 @@ public record ModificarReservaRequest(
         @Pattern(regexp = "^APT-[0-9]{3}$", message = "debe tener el formato APT-NNN") String identificacionApartamento,
         LocalDate fechaEntrada,
         LocalDate fechaSalida,
-        @Size(max = 30) List<@Valid OcupanteRequest> acompanantes
+        @Size(max = 30) List<@NotNull @Valid OcupanteRequest> acompanantes
 ) {
 }

@@ -200,10 +200,12 @@ public class ApartamentoController {
     }
 
     @GetMapping("/{identificacion}/tarifas/historial")
-    public ResponseEntity<List<RegistroTarifaResponse>> historialTarifas(
-            @PathVariable @Pattern(regexp = ID) String identificacion) {
-        return ResponseEntity.ok(consultar.ejecutar(new IdentificacionApartamento(identificacion))
-                .getHistorialTarifas().stream().map(mapper::toRegistroTarifa).toList());
+    public ResponseEntity<PaginaResponse<RegistroTarifaResponse>> historialTarifas(
+            @PathVariable @Pattern(regexp = ID) String identificacion,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(10) int size) {
+        return ResponseEntity.ok(valorMapper.toPagina(consultar.historialTarifas(
+                new IdentificacionApartamento(identificacion), new PeticionPagina(page, size)), mapper::toRegistroTarifa));
     }
 
     @PostMapping("/{identificacion}/novedades")
@@ -218,10 +220,12 @@ public class ApartamentoController {
     }
 
     @GetMapping("/{identificacion}/novedades")
-    public ResponseEntity<List<NovedadApartamentoResponse>> novedades(
-            @PathVariable @Pattern(regexp = ID) String identificacion) {
-        return ResponseEntity.ok(consultar.ejecutar(new IdentificacionApartamento(identificacion))
-                .getNovedades().stream().map(mapper::toNovedad).toList());
+    public ResponseEntity<PaginaResponse<NovedadApartamentoResponse>> novedades(
+            @PathVariable @Pattern(regexp = ID) String identificacion,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(10) int size) {
+        return ResponseEntity.ok(valorMapper.toPagina(consultar.novedades(
+                new IdentificacionApartamento(identificacion), new PeticionPagina(page, size)), mapper::toNovedad));
     }
 
     /** 7.3: las reservas ya creadas se conservan; si alguna supera la nueva capacidad, se advierte y se lista. */
