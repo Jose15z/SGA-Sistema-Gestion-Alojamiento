@@ -1,12 +1,20 @@
 package co.edu.uniquindio.sga.infrastructure.rest;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
+import java.util.stream.Stream;
+import org.springframework.http.HttpMethod;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -142,5 +150,92 @@ class ApiSeguridadYErroresTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"))
                 .andExpect(jsonPath("$.detalles", hasItem(containsString("antelacionMinimaHoras"))));
+    }
+
+    @ParameterizedTest(name = "{0} {1}: {3} no admite elementos null")
+    @MethodSource("solicitudesConElementoNulo")
+    void unElementoNuloEnUnaListaResponde400(String metodo, String ruta, String cuerpo, String campo) throws Exception {
+        mockMvc.perform(request(HttpMethod.valueOf(metodo), ruta)
+                        .header("Authorization", token("admin@sieteraices.co", "Admin123*"))
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"))
+                .andExpect(jsonPath("$.detalles").isNotEmpty());
+    }
+
+    private static Stream<Arguments> solicitudesConElementoNulo() {
+        return Stream.of(
+                Arguments.of("POST", "/api/cotizaciones", """
+                        {"identificacionApartamento":"APT-101","fechaEntrada":"2031-02-10",
+                         "fechaSalida":"2031-02-12","ocupantes":[null]}
+                        """, "ocupantes"),
+                Arguments.of("POST", "/api/reservas", """
+                        {"identificacionApartamento":"APT-101","fechaEntrada":"2031-02-10",
+                         "fechaSalida":"2031-02-12","canalOrigen":"DIRECTO",
+                         "titular":{"documento":"CC-TEST","nombreCompleto":"Ana","fechaNacimiento":"1990-01-01"},
+                         "acompanantes":[null]}
+                        """, "acompanantes"),
+                Arguments.of("PUT", "/api/reservas/RES-2025-00001/modificacion",
+                        "{\"acompanantes\":[null]}", "acompanantes"),
+                Arguments.of("POST", "/api/apartamentos", """
+                        {"identificacion":"APT-999","nombre":"Prueba","descripcion":"Prueba",
+                         "dormitorios":1,"capacidad":2,"caracteristicas":[],"tarifas":[null]}
+                        """, "tarifas"),
+                Arguments.of("POST", "/api/politicas-cancelacion", """
+                        {"tramos":[null],"porcentajeNoShow":50,"horaEntrada":"15:00"}
+                        """, "tramos"),
+                Arguments.of("PUT", "/api/alojamiento", """
+                        {"nombre":"Siete Raíces","descripcion":"Prueba","ciudad":"Armenia",
+                         "direccion":"Dirección de prueba","latitud":4.53,"longitud":-75.68,
+                         "normas":[],"servicios":[null]}
+                        """, "servicios"));
+    }
+
+    @Test
+    void disponibilidadConPaginaExtremaRespondeVaciaEnLugarDe500() throws Exception {
+        mockMvc.perform(get("/api/apartamentos/disponibles")
+                        .param("fechaEntrada", "2031-02-10").param("fechaSalida", "2031-02-12")
+                        .param("totalOcupantes", "1").param("page", String.valueOf(Integer.MAX_VALUE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido").isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"tarifas/historial", "novedades"})
+    void losHistorialesSonPaginadosYRechazanTamaniosMayoresADiez(String historial) throws Exception {
+        String admin = token("admin@sieteraices.co", "Admin123*");
+        String ruta = "/api/apartamentos/APT-101/" + historial;
+        mockMvc.perform(get(ruta).header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido").isArray())
+                .andExpect(jsonPath("$.pagina").value(0))
+                .andExpect(jsonPath("$.tamanio").value(10));
+        mockMvc.perform(get(ruta).header("Authorization", admin).param("size", "11"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get(ruta).header("Authorization", admin).param("page", "-1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Transactional
+    void historialDeTarifasSeDivideEnPaginasDeDiezSinPerderElOrden() throws Exception {
+        String admin = token("admin@sieteraices.co", "Admin123*");
+        for (int i = 0; i < 11; i++) {
+            mockMvc.perform(put("/api/apartamentos/APT-101/tarifas").header("Authorization", admin)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"temporada\":\"BASE\",\"valorPorOcupanteNoche\":" + (100_000 + i) + "}"))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(get("/api/apartamentos/APT-101/tarifas/historial").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido.length()").value(10))
+                .andExpect(jsonPath("$.totalElementos").value(14))
+                .andExpect(jsonPath("$.totalPaginas").value(2))
+                .andExpect(jsonPath("$.contenido[0].valorPorOcupanteNoche").value(100_010));
+        mockMvc.perform(get("/api/apartamentos/APT-101/tarifas/historial").header("Authorization", admin)
+                        .param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido.length()").value(4))
+                .andExpect(jsonPath("$.pagina").value(1));
     }
 }

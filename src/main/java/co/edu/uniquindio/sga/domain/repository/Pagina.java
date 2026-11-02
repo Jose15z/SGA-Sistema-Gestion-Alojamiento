@@ -28,8 +28,8 @@ public record Pagina<T>(List<T> contenido, int numero, int tamanio, long totalEl
 
     /** Pagina en memoria una lista ya filtrada por el dominio. */
     public static <T> Pagina<T> de(List<T> todos, PeticionPagina peticion) {
-        int desde = Math.min(peticion.numero() * peticion.tamanio(), todos.size());
-        int hasta = Math.min(desde + peticion.tamanio(), todos.size());
+        int desde = (int) Math.min((long) peticion.numero() * peticion.tamanio(), todos.size());
+        int hasta = (int) Math.min((long) desde + peticion.tamanio(), todos.size());
         return new Pagina<>(todos.subList(desde, hasta), peticion.numero(), peticion.tamanio(), todos.size());
     }
 }

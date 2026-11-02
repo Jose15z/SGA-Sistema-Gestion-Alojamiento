@@ -19,7 +19,7 @@ public record CrearReservaRequest(
         @NotNull CanalOrigen canalOrigen,
         @Size(max = 60) String identificadorExterno,
         @NotNull @Valid OcupanteRequest titular,
-        List<@Valid OcupanteRequest> acompanantes,
+        List<@NotNull @Valid OcupanteRequest> acompanantes,
         LocalTime horaEstimadaLlegada,
         @PositiveOrZero Integer mascotas
 ) {

@@ -12,6 +12,6 @@ public record CotizacionRequest(
         @NotBlank String identificacionApartamento,
         @NotNull LocalDate fechaEntrada,
         @NotNull LocalDate fechaSalida,
-        @NotEmpty List<@Valid OcupanteCotizacionRequest> ocupantes
+        @NotEmpty List<@NotNull @Valid OcupanteCotizacionRequest> ocupantes
 ) {
 }

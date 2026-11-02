@@ -18,6 +18,6 @@ public record RegistrarApartamentoRequest(
         @NotNull @Min(1) Integer dormitorios,
         @NotNull @Min(1) Integer capacidad,
         @NotNull @Size(max = 20) List<@NotBlank @Size(max = 80) String> caracteristicas,
-        @NotEmpty List<@Valid TarifaRequest> tarifas
+        @NotEmpty List<@NotNull @Valid TarifaRequest> tarifas
 ) {
 }

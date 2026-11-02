@@ -652,15 +652,15 @@ paths:
       operationId: historialTarifas
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/SizeParam'
       responses:
         '200':
           description: Histórico
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RegistroTarifaResponse'
+                $ref: '#/components/schemas/PaginaHistorialTarifas'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -718,15 +718,15 @@ paths:
       operationId: listarNovedadesApartamento
       parameters:
       - $ref: '#/components/parameters/IdentificacionApartamentoParam'
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/SizeParam'
       responses:
         '200':
           description: Novedades
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/NovedadApartamentoResponse'
+                $ref: '#/components/schemas/PaginaNovedades'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2631,6 +2631,50 @@ components:
           type: integer
           format: int64
           description: Valor total estimado de la estancia para el grupo
+    PaginaHistorialTarifas:
+      type: object
+      required:
+      - contenido
+      - pagina
+      - tamanio
+      - totalElementos
+      - totalPaginas
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistroTarifaResponse'
+        pagina:
+          type: integer
+        tamanio:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+    PaginaNovedades:
+      type: object
+      required:
+      - contenido
+      - pagina
+      - tamanio
+      - totalElementos
+      - totalPaginas
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/NovedadApartamentoResponse'
+        pagina:
+          type: integer
+        tamanio:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
     PaginaApartamentos:
       type: object
       required:
