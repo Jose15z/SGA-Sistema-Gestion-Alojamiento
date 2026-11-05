@@ -58,7 +58,10 @@ class ReservasUseCasesTest {
         var titular = ReservasDePrueba.pendiente().getTitular();
         assertThrows(ReglaDominioException.class, () -> e.creador(ReservasDePrueba.CREACION,TipoTemporada.BASE,100)
                 .ejecutar(e.apartamento.getIdentificacion(), ReservasDePrueba.pendiente().getEstancia(), titular,
-                        List.of(titular), CanalOrigen.EXTERNO, null, null, 0, EscenarioReservas.RECEPCION));
+                        List.of(titular), CanalOrigen.EXTERNO, null, null, 0,
+                        new co.edu.uniquindio.sga.application.seguridad.Solicitante("admin",
+                                co.edu.uniquindio.sga.application.seguridad.Rol.ADMINISTRADOR,
+                                new DocumentoIdentidad("ADMIN-1"))));
         assertTrue(e.reservas.buscarPorEstado(EstadoReserva.PENDIENTE).isEmpty());
     }
     @Test void confirmaConAnticipoExacto() {

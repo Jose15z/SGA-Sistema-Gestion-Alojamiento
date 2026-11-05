@@ -9,6 +9,7 @@ public record TokenResponse(
         String tipo,
         Instant expiraEn,
         String correo,
-        Rol rol
+        Rol rol,
+        java.util.List<Rol> roles
 ) {
 }

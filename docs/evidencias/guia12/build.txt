@@ -1,0 +1,33 @@
+Comando: ./gradlew build
+> Task :compileJava
+> Task :processResources UP-TO-DATE
+> Task :classes
+> Task :resolveMainClassName
+> Task :processAot
+> Task :compileAotJava
+> Task :processAotResources UP-TO-DATE
+> Task :aotClasses
+> Task :collectReachabilityMetadata UP-TO-DATE
+> Task :bootJar
+> Task :jar
+> Task :assemble
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+> Task :processTestAot
+> Task :compileAotTestJava
+> Task :processAotTestResources UP-TO-DATE
+> Task :aotTestClasses
+> Task :test
+> Task :check
+> Task :build
+BUILD SUCCESSFUL in 24s
+14 actionable tasks: 10 executed, 4 up-to-date
+
+{
+  "tests": 528,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "suites": 55
+}

@@ -74,7 +74,7 @@ import java.time.LocalDate;
 public class ApartamentoController {
 
     private static final String ID = "^APT-[0-9]{3}$";
-    private static final Set<String> PERSONAL = Set.of("ROLE_ADMINISTRADOR", "ROLE_RECEPCIONISTA");
+    private static final Set<String> PERSONAL = Set.of("ADMINISTRADOR", "RECEPCIONISTA");
 
     private final RegistrarApartamentoUseCase registrar;
     private final ConsultarApartamentoUseCase consultar;

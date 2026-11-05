@@ -32,6 +32,7 @@ public class RespuestaErrorSeguridad implements AuthenticationEntryPoint, Access
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException excepcion) throws IOException {
+        response.setHeader("WWW-Authenticate", "Bearer");
         escribir(response, HttpStatus.UNAUTHORIZED, "NO_AUTENTICADO",
                 "Se requiere un token de acceso válido y vigente");
     }

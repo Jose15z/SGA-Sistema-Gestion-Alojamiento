@@ -47,6 +47,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -70,6 +72,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/reservas")
 @Tag(name = "Reservas")
+@PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR')")
+@ApiResponse(responseCode = "401", description = "Sin token o token inválido")
+@ApiResponse(responseCode = "403", description = "El rol no lo permite o no es el titular")
 public class ReservaController {
 
     private static final String CODIGO = "^RES-[0-9]{4}-[0-9]{5}$";
@@ -120,6 +125,7 @@ public class ReservaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('HUESPED', 'RECEPCIONISTA', 'ADMINISTRADOR')")
     public ResponseEntity<ReservaDetalleResponse> crear(@Valid @RequestBody CrearReservaRequest request,
                                                         @Parameter(hidden = true) Solicitante solicitante) {
         List<Ocupante> grupo = mapper.toGrupo(request.titular(), request.acompanantes(), LocalDate.now(reloj));
@@ -166,6 +172,8 @@ public class ReservaController {
     }
 
     @GetMapping("/{codigo}")
+    @PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR') "
+            + "or (hasAuthority('HUESPED') and @propietarioReserva.esTitular(#codigo, authentication))")
     public ResponseEntity<ReservaDetalleResponse> consultar(@PathVariable @Pattern(regexp = CODIGO) String codigo,
                                                             @Parameter(hidden = true) Solicitante solicitante) {
         return ResponseEntity.ok(mapper.toDetalle(consultar.ejecutar(new CodigoReserva(codigo), solicitante)));
@@ -178,6 +186,8 @@ public class ReservaController {
     }
 
     @PutMapping("/{codigo}/cancelar")
+    @PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR') "
+            + "or (hasAuthority('HUESPED') and @propietarioReserva.esTitular(#codigo, authentication))")
     public ResponseEntity<ReservaDetalleResponse> cancelar(@PathVariable @Pattern(regexp = CODIGO) String codigo,
                                                            @Valid @RequestBody MotivoRequest request,
                                                            @Parameter(hidden = true) Solicitante solicitante) {
@@ -186,6 +196,8 @@ public class ReservaController {
     }
 
     @PutMapping("/{codigo}/hora-llegada")
+    @PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR') "
+            + "or (hasAuthority('HUESPED') and @propietarioReserva.esTitular(#codigo, authentication))")
     public ResponseEntity<ReservaDetalleResponse> indicarHoraLlegada(
             @PathVariable @Pattern(regexp = CODIGO) String codigo, @Valid @RequestBody HoraLlegadaRequest request,
             @Parameter(hidden = true) Solicitante solicitante) {
@@ -194,6 +206,8 @@ public class ReservaController {
     }
 
     @PutMapping("/{codigo}/novedad-llegada")
+    @PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR') "
+            + "or (hasAuthority('HUESPED') and @propietarioReserva.esTitular(#codigo, authentication))")
     public ResponseEntity<ReservaDetalleResponse> informarNovedad(
             @PathVariable @Pattern(regexp = CODIGO) String codigo, @Valid @RequestBody NovedadLlegadaRequest request,
             @Parameter(hidden = true) Solicitante solicitante) {
@@ -228,6 +242,8 @@ public class ReservaController {
     }
 
     @PostMapping("/{codigo}/vehiculos")
+    @PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR') "
+            + "or (hasAuthority('HUESPED') and @propietarioReserva.esTitular(#codigo, authentication))")
     public ResponseEntity<ReservaDetalleResponse> registrarVehiculo(
             @PathVariable @Pattern(regexp = CODIGO) String codigo, @Valid @RequestBody RegistrarVehiculoRequest request,
             @Parameter(hidden = true) Solicitante solicitante) {

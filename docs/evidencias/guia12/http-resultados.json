@@ -1,0 +1,392 @@
+{
+  "fechaUtc": "2026-11-05T14:59:15.750824+00:00",
+  "baseUrl": "http://localhost:8081",
+  "casos": 19,
+  "aprobados": 19,
+  "resultados": [
+    {
+      "caso": "Login recepción",
+      "metodo": "POST",
+      "ruta": "/api/auth/login",
+      "esperado": 200,
+      "obtenido": 200,
+      "correcto": true,
+      "respuesta": {
+        "token": "[OMITIDO]",
+        "tipo": "Bearer",
+        "expiraEn": "2026-11-05T15:29:15.333138Z",
+        "correo": "recepcion@sieteraices.co",
+        "rol": "RECEPCIONISTA",
+        "roles": [
+          "RECEPCIONISTA"
+        ]
+      }
+    },
+    {
+      "caso": "Login huésped 1",
+      "metodo": "POST",
+      "ruta": "/api/auth/login",
+      "esperado": 200,
+      "obtenido": 200,
+      "correcto": true,
+      "respuesta": {
+        "token": "[OMITIDO]",
+        "tipo": "Bearer",
+        "expiraEn": "2026-11-05T15:29:15.459544Z",
+        "correo": "ana.ramirez@correo.com",
+        "rol": "HUESPED",
+        "roles": [
+          "HUESPED"
+        ]
+      }
+    },
+    {
+      "caso": "Login huésped 2",
+      "metodo": "POST",
+      "ruta": "/api/auth/login",
+      "esperado": 200,
+      "obtenido": 200,
+      "correcto": true,
+      "respuesta": {
+        "token": "[OMITIDO]",
+        "tipo": "Bearer",
+        "expiraEn": "2026-11-05T15:29:15.521397Z",
+        "correo": "carlos.gomez@correo.com",
+        "rol": "HUESPED",
+        "roles": [
+          "HUESPED"
+        ]
+      }
+    },
+    {
+      "caso": "Login personal de servicio",
+      "metodo": "POST",
+      "ruta": "/api/auth/login",
+      "esperado": 200,
+      "obtenido": 200,
+      "correcto": true,
+      "respuesta": {
+        "token": "[OMITIDO]",
+        "tipo": "Bearer",
+        "expiraEn": "2026-11-05T15:29:15.582423Z",
+        "correo": "servicio@sieteraices.co",
+        "rol": "PERSONAL_SERVICIO",
+        "roles": [
+          "PERSONAL_SERVICIO"
+        ]
+      }
+    },
+    {
+      "caso": "Contraseña incorrecta",
+      "metodo": "POST",
+      "ruta": "/api/auth/login",
+      "esperado": 401,
+      "obtenido": 401,
+      "correcto": true,
+      "respuesta": {
+        "estado": 401,
+        "codigo": "CREDENCIALES_INVALIDAS",
+        "mensaje": "Credenciales inválidas",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.645123Z"
+      }
+    },
+    {
+      "caso": "Correo inválido",
+      "metodo": "POST",
+      "ruta": "/api/auth/login",
+      "esperado": 400,
+      "obtenido": 400,
+      "correcto": true,
+      "respuesta": {
+        "estado": 400,
+        "codigo": "SOLICITUD_INVALIDA",
+        "mensaje": "La solicitud no cumple el formato esperado",
+        "detalles": [
+          "correo: must be a well-formed email address"
+        ],
+        "marcaTiempo": "2026-11-05T14:59:15.655740Z"
+      }
+    },
+    {
+      "caso": "Sin token",
+      "metodo": "GET",
+      "ruta": "/api/reservas?estado=PENDIENTE",
+      "esperado": 401,
+      "obtenido": 401,
+      "correcto": true,
+      "respuesta": {
+        "estado": 401,
+        "codigo": "NO_AUTENTICADO",
+        "mensaje": "Se requiere un token de acceso válido y vigente",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.657856Z"
+      }
+    },
+    {
+      "caso": "Listado prohibido a huésped",
+      "metodo": "GET",
+      "ruta": "/api/reservas?estado=PENDIENTE",
+      "esperado": 403,
+      "obtenido": 403,
+      "correcto": true,
+      "respuesta": {
+        "estado": 403,
+        "codigo": "ACCESO_DENEGADO",
+        "mensaje": "El rol del usuario no permite realizar esta operación",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.663240Z"
+      }
+    },
+    {
+      "caso": "Listado de recepción",
+      "metodo": "GET",
+      "ruta": "/api/reservas?estado=PENDIENTE",
+      "esperado": 200,
+      "obtenido": 200,
+      "correcto": true,
+      "respuesta": {
+        "contenido": [
+          {
+            "codigo": "RES-2025-00001",
+            "identificacionApartamento": "APT-301",
+            "fechaEntrada": "2026-11-25",
+            "fechaSalida": "2026-11-28",
+            "estado": "PENDIENTE",
+            "canalOrigen": "PORTAL",
+            "titularNombre": "Ana Ramírez",
+            "valorTotal": 234000,
+            "fechaCreacion": "2026-11-05T08:59:07.760421"
+          }
+        ],
+        "pagina": 0,
+        "tamanio": 10,
+        "totalElementos": 1,
+        "totalPaginas": 1
+      }
+    },
+    {
+      "caso": "Reserva propia",
+      "metodo": "GET",
+      "ruta": "/api/reservas/RES-2025-00001",
+      "esperado": 200,
+      "obtenido": 200,
+      "correcto": true,
+      "respuesta": {
+        "codigo": "RES-2025-00001",
+        "identificacionApartamento": "APT-301",
+        "fechaEntrada": "2026-11-25",
+        "fechaSalida": "2026-11-28",
+        "canalOrigen": "PORTAL",
+        "identificadorExterno": null,
+        "estado": "PENDIENTE",
+        "fechaCreacion": "2026-11-05T08:59:07.760421",
+        "horaEstimadaLlegada": "16:30:00",
+        "novedadLlegada": null,
+        "mascotas": 0,
+        "vehiculos": [],
+        "titular": {
+          "documento": "1094123456",
+          "nombreCompleto": "Ana Ramírez",
+          "fechaNacimiento": "1990-05-12"
+        },
+        "ocupantes": [
+          {
+            "documento": "1094123456",
+            "nombreCompleto": "Ana Ramírez",
+            "fechaNacimiento": "1990-05-12"
+          },
+          {
+            "documento": "TI1030998877",
+            "nombreCompleto": "Sofía Ramírez",
+            "fechaNacimiento": "2019-03-02"
+          }
+        ],
+        "cotizacionCongelada": {
+          "subtotal": 234000,
+          "porcentajeDescuento": 0,
+          "valorDescuento": 0,
+          "valorTotal": 234000,
+          "totalNoches": 3,
+          "detalleNoches": [
+            {
+              "noche": "2026-11-25",
+              "temporada": "BASE",
+              "tarifaOcupanteNoche": 78000,
+              "ocupantesFacturables": 1,
+              "subtotalNoche": 78000
+            },
+            {
+              "noche": "2026-11-26",
+              "temporada": "BASE",
+              "tarifaOcupanteNoche": 78000,
+              "ocupantesFacturables": 1,
+              "subtotalNoche": 78000
+            },
+            {
+              "noche": "2026-11-27",
+              "temporada": "BASE",
+              "tarifaOcupanteNoche": 78000,
+              "ocupantesFacturables": 1,
+              "subtotalNoche": 78000
+            }
+          ]
+        },
+        "versionPolitica": 1,
+        "historial": [
+          {
+            "momento": "2026-11-05T08:59:07.760421",
+            "accion": "CREACION",
+            "autor": "ana.ramirez@correo.com",
+            "estadoAnterior": null,
+            "estadoNuevo": "PENDIENTE",
+            "observacion": "Reserva creada por el canal PORTAL"
+          },
+          {
+            "momento": "2026-11-05T08:59:07.760421",
+            "accion": "HORA_LLEGADA",
+            "autor": "ana.ramirez@correo.com",
+            "estadoAnterior": "PENDIENTE",
+            "estadoNuevo": "PENDIENTE",
+            "observacion": "Hora estimada de llegada: 16:30"
+          }
+        ]
+      }
+    },
+    {
+      "caso": "Reserva ajena",
+      "metodo": "GET",
+      "ruta": "/api/reservas/RES-2025-00001",
+      "esperado": 403,
+      "obtenido": 403,
+      "correcto": true,
+      "respuesta": {
+        "estado": 403,
+        "codigo": "ACCESO_DENEGADO",
+        "mensaje": "El rol del usuario no permite realizar esta operación",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.724783Z"
+      }
+    },
+    {
+      "caso": "Recurso inexistente para recepción",
+      "metodo": "GET",
+      "ruta": "/api/reservas/RES-2026-99999",
+      "esperado": 404,
+      "obtenido": 404,
+      "correcto": true,
+      "respuesta": {
+        "estado": 404,
+        "codigo": "RECURSO_NO_ENCONTRADO",
+        "mensaje": "No se encontró una reserva con el código RES-2026-99999",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.728156Z"
+      }
+    },
+    {
+      "caso": "Recurso inexistente para huésped",
+      "metodo": "GET",
+      "ruta": "/api/reservas/RES-2026-99999",
+      "esperado": 403,
+      "obtenido": 403,
+      "correcto": true,
+      "respuesta": {
+        "estado": 403,
+        "codigo": "ACCESO_DENEGADO",
+        "mensaje": "El rol del usuario no permite realizar esta operación",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.732510Z"
+      }
+    },
+    {
+      "caso": "Personal de servicio no confirma",
+      "metodo": "PUT",
+      "ruta": "/api/reservas/RES-2025-00001/confirmar",
+      "esperado": 403,
+      "obtenido": 403,
+      "correcto": true,
+      "respuesta": {
+        "estado": 403,
+        "codigo": "ACCESO_DENEGADO",
+        "mensaje": "El rol del usuario no permite realizar esta operación",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.734612Z"
+      }
+    },
+    {
+      "caso": "Folio ajeno",
+      "metodo": "GET",
+      "ruta": "/api/folios/RES-2025-00001",
+      "esperado": 403,
+      "obtenido": 403,
+      "correcto": true,
+      "respuesta": {
+        "estado": 403,
+        "codigo": "ACCESO_DENEGADO",
+        "mensaje": "El rol del usuario no permite realizar esta operación",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.742218Z"
+      }
+    },
+    {
+      "caso": "Token alterado",
+      "metodo": "GET",
+      "ruta": "/api/reservas",
+      "esperado": 401,
+      "obtenido": 401,
+      "correcto": true,
+      "respuesta": {
+        "estado": 401,
+        "codigo": "NO_AUTENTICADO",
+        "mensaje": "Se requiere un token de acceso válido y vigente",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.745013Z"
+      }
+    },
+    {
+      "caso": "Token vencido con firma válida",
+      "metodo": "GET",
+      "ruta": "/api/reservas",
+      "esperado": 401,
+      "obtenido": 401,
+      "correcto": true,
+      "respuesta": {
+        "estado": 401,
+        "codigo": "NO_AUTENTICADO",
+        "mensaje": "Se requiere un token de acceso válido y vigente",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.747309Z"
+      }
+    },
+    {
+      "caso": "Emisor incorrecto con firma válida",
+      "metodo": "GET",
+      "ruta": "/api/reservas",
+      "esperado": 401,
+      "obtenido": 401,
+      "correcto": true,
+      "respuesta": {
+        "estado": 401,
+        "codigo": "NO_AUTENTICADO",
+        "mensaje": "Se requiere un token de acceso válido y vigente",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.748550Z"
+      }
+    },
+    {
+      "caso": "Algoritmo none",
+      "metodo": "GET",
+      "ruta": "/api/reservas",
+      "esperado": 401,
+      "obtenido": 401,
+      "correcto": true,
+      "respuesta": {
+        "estado": 401,
+        "codigo": "NO_AUTENTICADO",
+        "mensaje": "Se requiere un token de acceso válido y vigente",
+        "detalles": [],
+        "marcaTiempo": "2026-11-05T14:59:15.749762Z"
+      }
+    }
+  ]
+}

@@ -28,6 +28,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Autenticación")
+@io.swagger.v3.oas.annotations.security.SecurityRequirements
 public class AutenticacionController {
 
     private final RegistrarHuespedUseCase registrarHuesped;

@@ -48,8 +48,7 @@ public record Solicitante(String usuario, Rol rol, DocumentoIdentidad documento)
 
     /**
      * 2.4 y 7.1: el huésped reserva por el PORTAL a su nombre; la recepción y la
-     * administración registran reservas DIRECTO (o EXTERNO, mientras llega el
-     * canal externo del corte 4) a nombre de un titular que puede no tener cuenta.
+     * administración registran reservas DIRECTO a nombre de un titular que puede no tener cuenta.
      */
     public void verificarPuedeReservar(CanalOrigen canal, DocumentoIdentidad titular) {
         if (esHuesped()) {
@@ -64,8 +63,8 @@ public record Solicitante(String usuario, Rol rol, DocumentoIdentidad documento)
         if (!rol.gestionaReservas()) {
             throw new AccesoDenegadoException("El rol " + rol + " no registra reservas");
         }
-        if (canal == CanalOrigen.PORTAL) {
-            throw new AccesoDenegadoException("El canal PORTAL es exclusivo de los huéspedes");
+        if (rol == Rol.RECEPCIONISTA && canal != CanalOrigen.DIRECTO) {
+            throw new AccesoDenegadoException("La recepción solo reserva por el canal DIRECTO");
         }
     }
 }

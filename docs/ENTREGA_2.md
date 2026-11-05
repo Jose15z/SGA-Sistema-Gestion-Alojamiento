@@ -174,7 +174,7 @@ Cada regla indica dónde se implementa (siempre en el dominio), la prueba unitar
 - **API.** DTOs `record` en `application.dto.request/response`, que solo exponen enums cerrados del dominio. Bean Validation valida la forma (400); el dominio valida las reglas (409). Un controller por recurso, sin endpoint genérico de estado; el único `DELETE` es la eliminación lógica de usuarios.
 - **Excepciones.** `ReglaDominioException` (dominio) → 409; `RecursoNoEncontradoException` y sus subclases (aplicación) → 404; `AccesoDenegadoException` → 403; `CredencialesInvalidasException` → 401; `GlobalExceptionHandler` y `RespuestaErrorSeguridad` producen un único `ErrorResponse` sin trazas.
 - **Correo.** `NotificadorCorreo` es un puerto de aplicación; `NotificadorCorreoLocal` (I-02) escribe el mensaje en el log, de modo que la recuperación de contraseña funciona sin internet ni credenciales, y un fallo de envío no detiene la operación (I-05).
-- **Seguridad.** JWT HS256 con expiración; la clave llega por `SGA_JWT_SECRETO` (si falta, se genera una aleatoria al arrancar), nunca está en el repositorio. Contraseñas con BCrypt. El rol se verifica en `SeguridadConfig`; el propietario, en los casos de uso con `Solicitante.verificarAcceso` y `Reserva.perteneceA`.
+- **Seguridad.** JWT HS256 con expiración; la clave es obligatoria y llega por `SGA_JWT_SECRET` o el archivo local ignorado `application-secrets.properties` (actualizado en la Guía 12), nunca está en el repositorio. Contraseñas con BCrypt. El rol se verifica en `SeguridadConfig`; el propietario, en los casos de uso con `Solicitante.verificarAcceso` y `Reserva.perteneceA`.
 
 ### Matriz de roles (7.1)
 
@@ -188,9 +188,9 @@ Cada regla indica dónde se implementa (siempre en el dominio), la prueba unitar
 | Listar apartamentos, iniciar y terminar la preparación, novedades | | | ✔ | ✔ | ✔ |
 | Histórico de tarifas, listar bloqueos y temporadas | | | | ✔ | ✔ |
 | Registrar bloqueo y levantarlo; temporada; política | | | | | ✔ |
-| Crear reserva | | PORTAL, a su nombre | | DIRECTO / EXTERNO | DIRECTO / EXTERNO |
-| Consultar, listar, cancelar, hora de llegada, novedad de llegada, vehículos | | solo las suyas | | ✔ | ✔ |
-| Modificar, confirmar, resolver novedad, llegada, salida, no-show, movimientos del día | | | | ✔ | ✔ |
+| Crear reserva | | PORTAL, a su nombre | | DIRECTO | DIRECTO / EXTERNO |
+| Consultar, cancelar, hora de llegada, novedad de llegada, vehículos | | solo las suyas | | ✔ | ✔ |
+| Listar, modificar, confirmar, resolver novedad, llegada, salida, no-show, movimientos del día | | | | ✔ | ✔ |
 | Consultar folio | | solo el suyo | | ✔ | ✔ |
 | Pagos, cargos, servicios y cierre del folio con saldo cero | | | | ✔ | ✔ |
 | Autorizar el cierre del folio con saldo | | | | | ✔ |

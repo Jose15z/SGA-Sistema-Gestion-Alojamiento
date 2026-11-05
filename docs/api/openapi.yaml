@@ -71,7 +71,7 @@ paths:
       tags:
       - Autenticación
       summary: Iniciar sesión
-      description: 'Valida las credenciales y emite un JWT firmado (HS256) con expiración. El token se envía en el encabezado
+      description: 'Valida las credenciales y emite un JWT firmado (HS256) con expiración. Valida emisor y expiración de 30 minutos. El token se envía en el encabezado
         Authorization: Bearer {token}.'
       operationId: iniciarSesion
       security: []
@@ -152,6 +152,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     put:
       tags:
       - Usuarios
@@ -180,6 +182,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /usuarios/yo/contrasena:
     put:
       tags:
@@ -205,6 +209,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /usuarios:
     get:
       tags:
@@ -1239,7 +1245,7 @@ paths:
       summary: Crear una reserva
       description: 'Crea la reserva en PENDIENTE con su valor y política congelados (RN-22) y abre el folio con el cargo de
         alojamiento (7.7). El grupo es el titular más sus acompañantes. Un huésped solo reserva por el PORTAL y a su nombre;
-        el personal registra reservas DIRECTO o EXTERNO.
+        recepción registra reservas DIRECTO; administración admite DIRECTO y EXTERNO.
 
 
         Roles: ADMINISTRADOR, RECEPCIONISTA, HUESPED (solo sobre sus reservas).'
@@ -1277,10 +1283,10 @@ paths:
       - Reservas
       summary: Listar reservas
       description: 'Filtros por fechas, estado, apartamento, canal y titular (7.5), de la más reciente a la más antigua, 10
-        por página. Un huésped solo obtiene las suyas.
+        por página. El listado está reservado al personal de recepción y administración (Guía 12).
 
 
-        Roles: ADMINISTRADOR, RECEPCIONISTA, HUESPED (solo sobre sus reservas).'
+        Roles: ADMINISTRADOR, RECEPCIONISTA.'
       operationId: listarReservas
       parameters:
       - name: estado
@@ -1331,6 +1337,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /reservas/movimientos-del-dia:
     get:
       tags:
@@ -2331,6 +2339,7 @@ components:
       - expiraEn
       - correo
       - rol
+      - roles
       properties:
         token:
           type: string
@@ -2344,6 +2353,10 @@ components:
           type: string
         rol:
           $ref: '#/components/schemas/Rol'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rol'
     UsuarioResponse:
       type: object
       required:

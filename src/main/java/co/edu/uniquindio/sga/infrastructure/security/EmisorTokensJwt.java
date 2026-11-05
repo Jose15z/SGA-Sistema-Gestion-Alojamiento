@@ -27,8 +27,11 @@ public class EmisorTokensJwt implements EmisorTokens {
     private final String emisor;
 
     public EmisorTokensJwt(JwtEncoder encoder, Clock reloj,
-                           @Value("${sga.seguridad.jwt.expiracion-minutos}") long minutos,
-                           @Value("${sga.seguridad.jwt.emisor}") String emisor) {
+                           @Value("${sga.jwt.expiracion-minutos}") long minutos,
+                           @Value("${sga.jwt.emisor}") String emisor) {
+        if (minutos < 1 || minutos > 30) {
+            throw new IllegalArgumentException("La vigencia JWT debe estar entre 1 y 30 minutos");
+        }
         this.encoder = encoder;
         this.reloj = reloj;
         this.vigencia = Duration.ofMinutes(minutos);
@@ -45,6 +48,7 @@ public class EmisorTokensJwt implements EmisorTokens {
                 .issuedAt(ahora)
                 .expiresAt(expiraEn)
                 .claim(CLAIM_ROL, usuario.getRol().name())
+                .claim("roles", java.util.List.of(usuario.getRol().name()))
                 .claim(CLAIM_DOCUMENTO, usuario.getDocumento().numero())
                 .build();
         JwsHeader cabecera = JwsHeader.with(MacAlgorithm.HS256).build();

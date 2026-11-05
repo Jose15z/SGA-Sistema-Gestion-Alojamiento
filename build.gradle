@@ -26,7 +26,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
     implementation 'org.mapstruct:mapstruct:1.6.3'
     compileOnly 'org.projectlombok:lombok'
@@ -63,4 +63,6 @@ tasks.named('compileJava') {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // Clave ficticia exclusiva de pruebas; la aplicación requiere su propio secreto.
+    systemProperty 'sga.jwt.secret', 'clave-ficticia-exclusiva-pruebas-32-caracteres'
 }

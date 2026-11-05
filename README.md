@@ -35,11 +35,16 @@ Requisitos: JDK 25 y Git (Gradle se usa con el wrapper).
 ./gradlew bootRun
 ```
 
-La clave del JWT **no está en el repositorio**. Se entrega con la variable de entorno `SGA_JWT_SECRETO` (al menos 32 caracteres). Si no se define, la aplicación genera una clave aleatoria al arrancar y los tokens dejan de servir al reiniciar:
+La clave JWT es obligatoria y no se versiona. Genere una clave local con:
 
 ```bash
-SGA_JWT_SECRETO='una-clave-larga-de-al-menos-32-caracteres' ./gradlew bootRun
+python3 -c "import secrets; from pathlib import Path; Path('src/main/resources/application-secrets.properties').write_text('sga.jwt.secret=' + secrets.token_urlsafe(48) + '\n')"
+./gradlew bootRun
 ```
+
+También puede configurar `SGA_JWT_SECRET` (tiene prioridad sobre el archivo local). La plantilla está en `src/main/resources/application-secrets.properties.example`; sin clave, con la plantilla sin reemplazar o con menos de 32 bytes, la aplicación no arranca. En despliegue configure `SGA_SEGURIDAD_HERRAMIENTAS_DESARROLLO=false` y `SPRING_H2_CONSOLE_ENABLED=false` para cerrar Swagger y H2. Los access tokens duran 30 minutos; no se emiten refresh tokens.
+
+La [implementación de la Guía 12](docs/GUIA_12_SEGURIDAD.md) detalla decisiones, matriz de acceso, pruebas y evidencias. Ejecute `./gradlew build` para verificar todo; las pruebas usan una clave ficticia propia.
 
 | Recurso | URL |
 |---|---|
@@ -49,7 +54,7 @@ SGA_JWT_SECRETO='una-clave-larga-de-al-menos-32-caracteres' ./gradlew bootRun
 
 Swagger UI muestra dos definiciones: el contrato `docs/api/openapi.yaml` (seleccionado por defecto) y el documento generado desde el código.
 
-### Usuarios de prueba (cargados por `data.sql`)
+### Usuarios de prueba (configurados en properties y cargados por `DefaultUserInitializer`)
 
 | Correo | Contraseña | Rol |
 |---|---|---|

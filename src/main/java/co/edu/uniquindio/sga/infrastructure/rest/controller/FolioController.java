@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/folios")
 @Tag(name = "Folios")
+@PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR')")
 public class FolioController {
 
     private static final String CODIGO = "^RES-[0-9]{4}-[0-9]{5}$";
@@ -58,6 +60,8 @@ public class FolioController {
     }
 
     @GetMapping("/{codigoReserva}")
+    @PreAuthorize("hasAnyAuthority('RECEPCIONISTA', 'ADMINISTRADOR') "
+            + "or (hasAuthority('HUESPED') and @propietarioReserva.esTitular(#codigoReserva, authentication))")
     public ResponseEntity<FolioResponse> consultar(@PathVariable @Pattern(regexp = CODIGO) String codigoReserva,
                                                    @Parameter(hidden = true) Solicitante solicitante) {
         return ResponseEntity.ok(mapper.toResponse(consultar.ejecutar(new CodigoReserva(codigoReserva), solicitante)));

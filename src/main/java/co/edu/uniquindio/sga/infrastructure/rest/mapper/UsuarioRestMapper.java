@@ -18,6 +18,7 @@ public interface UsuarioRestMapper {
 
     default TokenResponse toToken(IniciarSesionUseCase.Resultado resultado) {
         return new TokenResponse(resultado.token().token(), "Bearer", resultado.token().expiraEn(),
-                resultado.usuario().getCorreo().valor(), resultado.usuario().getRol());
+                resultado.usuario().getCorreo().valor(), resultado.usuario().getRol(),
+                java.util.List.of(resultado.usuario().getRol()));
     }
 }

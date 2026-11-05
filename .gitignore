@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Guía 12: secretos locales
+application-secrets.properties

@@ -6318,7 +6318,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenRecepcion}}",
+                  "value": "{{tokenAdmin}}",
                   "type": "string"
                 }
               ]
@@ -6366,7 +6366,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenRecepcion}}",
+                  "value": "{{tokenAdmin}}",
                   "type": "string"
                 }
               ]
@@ -6413,7 +6413,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenRecepcion}}",
+                  "value": "{{tokenAdmin}}",
                   "type": "string"
                 }
               ]

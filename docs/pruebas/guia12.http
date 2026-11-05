@@ -1,0 +1,94 @@
+# Guía 12 — VS Code REST Client. Ejecutar los logins antes de las consultas.
+# Datos de demostración de Siete Raíces; no incluye secretos JWT ni tokens reales.
+# Caso 14: ejecutar python3 scripts/verificar_guia12.py y copiar el valor "vencido"
+# de build/guia12/tokens.json en tokenVencido. Ese archivo está ignorado por Git.
+@baseUrl = http://localhost:8080
+@tokenVencido = PEGAR_TOKEN_VENCIDO_LOCAL
+
+### 3 — Login correcto → 200, tipo Bearer y roles RECEPCIONISTA
+# @name loginRecepcion
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"correo":"recepcion@sieteraices.co","contrasena":"Recepcion123*"}
+
+### Login huésped 1 (titular de RES-2025-00001)
+# @name loginHuesped1
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"correo":"ana.ramirez@correo.com","contrasena":"Huesped123*"}
+
+### Login huésped 2
+# @name loginHuesped2
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"correo":"carlos.gomez@correo.com","contrasena":"Huesped123*"}
+
+### Login personal de servicio
+# @name loginServicio
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"correo":"servicio@sieteraices.co","contrasena":"Servicio123*"}
+
+### 4 — Contraseña incorrecta → 401 con mensaje genérico
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"correo":"recepcion@sieteraices.co","contrasena":"Incorrecta123"}
+
+### 5 — Correo inválido → 400, detalles contiene correo
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"correo":"sin-formato","contrasena":"Incorrecta123"}
+
+### 6 — Sin token → 401 con ErrorResponse y WWW-Authenticate
+GET {{baseUrl}}/api/reservas?estado=PENDIENTE
+
+### 7 — Huésped no lista reservas → 403
+GET {{baseUrl}}/api/reservas?estado=PENDIENTE
+Authorization: Bearer {{loginHuesped1.response.body.$.token}}
+
+### 8 — Recepción lista → 200
+GET {{baseUrl}}/api/reservas?estado=PENDIENTE
+Authorization: Bearer {{loginRecepcion.response.body.$.token}}
+
+### 9 — Titular consulta → 200
+GET {{baseUrl}}/api/reservas/RES-2025-00001
+Authorization: Bearer {{loginHuesped1.response.body.$.token}}
+
+### 10 — Otro huésped consulta → 403
+GET {{baseUrl}}/api/reservas/RES-2025-00001
+Authorization: Bearer {{loginHuesped2.response.body.$.token}}
+
+### 11 — Recepción consulta código inexistente con formato válido → 404
+# RES-NO-EXISTE del ejemplo de la guía no cumple el formato del dominio del proyecto.
+GET {{baseUrl}}/api/reservas/RES-2026-99999
+Authorization: Bearer {{loginRecepcion.response.body.$.token}}
+
+### 12 — Servicio no confirma → 403
+PUT {{baseUrl}}/api/reservas/RES-2025-00001/confirmar
+Authorization: Bearer {{loginServicio.response.body.$.token}}
+
+### 13 — Token alterado → 401 (firma modificada al agregar texto)
+GET {{baseUrl}}/api/reservas
+Authorization: Bearer {{loginRecepcion.response.body.$.token}}alterado
+
+### 14 — Token vencido firmado con la misma clave local → 401
+GET {{baseUrl}}/api/reservas
+Authorization: Bearer {{tokenVencido}}
+
+### Registro público → 201; repetir → 409
+POST {{baseUrl}}/api/auth/registro
+Content-Type: application/json
+
+{"nombreCompleto":"Huésped Guía 12","correo":"guia12@example.com","contrasena":"Segura1234","telefono":"3001234567","documento":"GUIA12-HTTP","fechaNacimiento":"1995-01-02","rol":"ADMINISTRADOR"}
+
+### Contraseña insegura → 400
+POST {{baseUrl}}/api/auth/registro
+Content-Type: application/json
+
+{"nombreCompleto":"Huésped Guía 12","correo":"guia12b@example.com","contrasena":"debil","telefono":"3001234567","documento":"GUIA12-HTTP-B","fechaNacimiento":"1995-01-02"}

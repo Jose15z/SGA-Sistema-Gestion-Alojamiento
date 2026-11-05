@@ -5,17 +5,7 @@
 -- colección de pruebas funcione cualquier día de la sustentación.
 -- =====================================================================
 
--- ---------------------------------------------------------------------
--- Usuarios (7.2). Contraseñas cifradas con BCrypt; las contraseñas de
--- prueba están en el README (Admin123*, Recepcion123*, Servicio123*,
--- Huesped123*). Hay un usuario por rol (12.3).
--- ---------------------------------------------------------------------
-INSERT INTO usuarios (identificacion, correo, documento, fecha_nacimiento, nombre_completo, telefono, rol, contrasena, activo) VALUES
-('8d2f6a3e-1a1b-4c2d-9e01-000000000001', 'admin@sieteraices.co', '1000000001', '1980-03-15', 'Administración Siete Raíces', '3104445566', 'ADMINISTRADOR', '$2a$10$Z5uXGP3nGFwocmhV31hnT..mRDgUiRAptL9Jo0sdOg9iN40DzA71C', TRUE),
-('8d2f6a3e-1a1b-4c2d-9e01-000000000002', 'recepcion@sieteraices.co', '1000000002', '1992-07-01', 'Recepción Siete Raíces', '3104445567', 'RECEPCIONISTA', '$2a$10$98Iokb67E2Soxbs0wpcld.wJ0httIpiTD79i1.GU3BtgK80AbgsAG', TRUE),
-('8d2f6a3e-1a1b-4c2d-9e01-000000000005', 'servicio@sieteraices.co', '1000000003', '1994-10-20', 'Personal de Servicio', '3104445568', 'PERSONAL_SERVICIO', '$2a$10$nU.g.JsetSm09nLLHX80Y./c6maEd5M5Eu9LICMb5dVaZ2.hQkWt.', TRUE),
-('8d2f6a3e-1a1b-4c2d-9e01-000000000003', 'ana.ramirez@correo.com', '1094123456', '1990-05-12', 'Ana Ramírez', '3001112233', 'HUESPED', '$2a$10$a6MxhB/3m4Mzsr09SdlOLujIyz1qJJwSOR3c8/ERcpsPuGmRWDqHW', TRUE),
-('8d2f6a3e-1a1b-4c2d-9e01-000000000004', 'carlos.gomez@correo.com', '1094555666', '1985-08-30', 'Carlos Gómez', '3002223344', 'HUESPED', '$2a$10$a6MxhB/3m4Mzsr09SdlOLujIyz1qJJwSOR3c8/ERcpsPuGmRWDqHW', TRUE);
+-- Usuarios: DefaultUserInitializer los carga con PasswordEncoder al iniciar.
 
 -- ---------------------------------------------------------------------
 -- Alojamiento (7.3): identidad de la Ficha (A.1) y servicios adicionales con

@@ -44,6 +44,24 @@ class ContratoOpenApiTest {
     private MockMvc mockMvc;
 
     @Test
+    @SuppressWarnings("unchecked")
+    void cadaOperacionProtegidaDocumenta401Y403YLoginEsPublico() throws Exception {
+        try (Reader lector = new FileReader("docs/api/openapi.yaml")) {
+            Map<String, Object> contrato = new Yaml().load(lector);
+            Map<String, Map<String, Map<String, Object>>> paths =
+                    (Map<String, Map<String, Map<String, Object>>>) contrato.get("paths");
+            assertEquals(List.of(), paths.get("/auth/login").get("post").get("security"));
+            assertEquals(List.of(), paths.get("/auth/registro").get("post").get("security"));
+            paths.forEach((ruta, operaciones) -> operaciones.forEach((metodo, operacion) -> {
+                if (!METODOS.contains(metodo) || List.of().equals(operacion.get("security"))) { return; }
+                Map<String, Object> respuestas = (Map<String, Object>) operacion.get("responses");
+                assertTrue(respuestas.containsKey("401"), metodo + " " + ruta + " sin 401");
+                assertTrue(respuestas.containsKey("403"), metodo + " " + ruta + " sin 403");
+            }));
+        }
+    }
+
+    @Test
     void lasOperacionesDelContratoCoincidenConLasDelCodigo() throws Exception {
         String generado = mockMvc.perform(get("/v3/api-docs")).andReturn().getResponse().getContentAsString();
         Set<String> implementadas = new TreeSet<>();
