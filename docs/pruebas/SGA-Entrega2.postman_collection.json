@@ -1876,7 +1876,7 @@
           ]
         },
         {
-          "name": "200 · Ana lista reservas: solo ve las suyas",
+          "name": "403 · Ana no tiene acceso al listado de reservas",
           "request": {
             "method": "GET",
             "header": [],
@@ -1906,15 +1906,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 · Ana lista reservas: solo ve las suyas → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Todas son de Ana', () => { const p = pm.response.json(); pm.expect(p.contenido.length).to.be.above(0); p.contenido.forEach(r => pm.expect(r.titularNombre).to.eql('Ana Ramírez')); });"
+                  "pm.test('El listado de reservas devuelve 403 a huéspedes', () => pm.response.to.have.status(403));",
+                  "pm.test('La respuesta solo contiene el error, sin reservas', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).not.to.have.property('contenido'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "200 · Carlos lista reservas: solo ve las suyas",
+          "name": "403 · Carlos no tiene acceso al listado de reservas",
           "request": {
             "method": "GET",
             "header": [],
@@ -1944,8 +1944,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 · Carlos lista reservas: solo ve las suyas → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Todas son de Carlos', () => { pm.response.json().contenido.forEach(r => pm.expect(r.titularNombre).to.eql('Carlos Gómez')); });"
+                  "pm.test('El listado de reservas devuelve 403 a huéspedes', () => pm.response.to.have.status(403));",
+                  "pm.test('La respuesta solo contiene el error, sin reservas', () => { const e = pm.response.json(); pm.expect(e).to.have.property('codigo'); pm.expect(e).not.to.have.property('contenido'); });"
                 ]
               }
             }
@@ -2210,7 +2210,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Listar apartamentos (10 por página, sin retirados) → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Paginado', () => { const p = pm.response.json(); pm.expect(p.tamanio).to.eql(10); pm.expect(p.totalElementos).to.be.at.least(7); p.contenido.forEach(a => pm.expect(a.activo).to.eql(true)); });"
+                  "pm.test('Paginado', () => { const p = pm.response.json(); pm.expect(p.tamanio).to.eql(10); pm.expect(p.totalElementos).to.be.at.least(7); p.contenido.forEach(a => pm.expect(a.activo).to.eql(true)); });",
+                  "pm.test('Orden ascendente por identificacion', () => { const valores = pm.response.json().contenido.map(r => r.identificacion); pm.expect(valores.length).to.be.at.least(2); pm.expect(valores).to.eql([...valores].sort()); });"
                 ]
               }
             }
@@ -3392,7 +3393,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Listar temporadas → 200', () => pm.response.to.have.status(200));",
-                  ""
+                  "",
+                  "pm.test('Orden ascendente por fechaInicio', () => { const valores = pm.response.json().contenido.map(r => r.fechaInicio); pm.expect(valores.length).to.be.at.least(2); pm.expect(valores).to.eql([...valores].sort()); });"
                 ]
               }
             }
@@ -4152,12 +4154,66 @@
           ]
         },
         {
+          "name": "Disponibilidad sin límite de precio para comparar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d30}}&fechaSalida={{d33}}&totalOcupantes=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apartamentos",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{d30}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{d33}}"
+                },
+                {
+                  "key": "totalOcupantes",
+                  "value": "2"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Hay al menos dos precios distintos para verificar el filtro', () => {",
+                  "  const { contenido, totalPaginas } = pm.response.json();",
+                  "  pm.expect(totalPaginas).to.eql(1);",
+                  "  const precios = contenido.map(a => a.valorEstimado);",
+                  "  pm.expect(new Set(precios).size).to.be.at.least(2);",
+                  "  const maximo = Math.min(...precios);",
+                  "  pm.collectionVariables.set('precioMaximoPrueba', maximo);",
+                  "  pm.collectionVariables.set('apartamentosPrecioEsperados', JSON.stringify(contenido.filter(a => a.valorEstimado === maximo).map(a => a.identificacion)));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Filtro por rango de precio",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d30}}&fechaSalida={{d33}}&totalOcupantes=2&precioMaximo=450000",
+              "raw": "{{baseUrl}}/apartamentos/disponibles?fechaEntrada={{d30}}&fechaSalida={{d33}}&totalOcupantes=2&precioMaximo={{precioMaximoPrueba}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -4180,7 +4236,7 @@
                 },
                 {
                   "key": "precioMaximo",
-                  "value": "450000"
+                  "value": "{{precioMaximoPrueba}}"
                 }
               ]
             },
@@ -4194,8 +4250,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Filtro por rango de precio → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Ninguno supera el máximo', () => pm.response.json().contenido.forEach(a => pm.expect(a.valorEstimado).to.be.at.most(450000)));"
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Conserva exactamente los apartamentos dentro del máximo inclusivo', () => {",
+                  "  const { contenido, totalElementos } = pm.response.json();",
+                  "  const esperados = JSON.parse(pm.collectionVariables.get('apartamentosPrecioEsperados'));",
+                  "  pm.expect(contenido).not.to.be.empty;",
+                  "  pm.expect(totalElementos).to.eql(esperados.length);",
+                  "  pm.expect(contenido.map(a => a.identificacion)).to.eql(esperados);",
+                  "  contenido.forEach(a => pm.expect(a.valorEstimado).to.be.at.most(Number(pm.collectionVariables.get('precioMaximoPrueba'))));",
+                  "});"
                 ]
               }
             }
@@ -4396,7 +4459,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Filtro por dormitorios mínimos → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Tres dormitorios', () => pm.response.json().contenido.forEach(a => pm.expect(a.dormitorios).to.be.at.least(3)));"
+                  "pm.test('Resultados presentes y todos cumplen el filtro', () => { const c = pm.response.json().contenido; pm.expect(c).not.to.be.empty; c.forEach(r => pm.expect(r.dormitorios).to.be.at.least(3)); });",
+                  "pm.test('Orden ascendente por identificacion', () => { const valores = pm.response.json().contenido.map(r => r.identificacion); pm.expect(valores.length).to.be.at.least(2); pm.expect(valores).to.eql([...valores].sort()); });"
                 ]
               }
             }
@@ -6716,7 +6780,299 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Listar reservas con filtro por estado, de la más reciente a la más antigua → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Filtradas y ordenadas', () => { const c = pm.response.json().contenido; c.forEach(r => pm.expect(r.estado).to.eql('CANCELADA')); for (let i = 1; i < c.length; i++) pm.expect(c[i-1].fechaCreacion >= c[i].fechaCreacion).to.eql(true); });"
+                  "pm.test('Hay varias canceladas y salen de la más reciente a la más antigua', () => {",
+                  "  const { contenido, totalElementos, totalPaginas } = pm.response.json();",
+                  "  pm.expect(contenido).to.have.lengthOf(3);",
+                  "  pm.expect(totalElementos).to.eql(3);",
+                  "  pm.expect(totalPaginas).to.eql(1);",
+                  "  contenido.forEach(r => pm.expect(r.estado).to.eql('CANCELADA'));",
+                  "  for (let i = 1; i < contenido.length; i++) pm.expect(contenido[i - 1].fechaCreacion > contenido[i].fechaCreacion).to.eql(true);",
+                  "  pm.collectionVariables.set('canceladasOrdenadas', JSON.stringify(contenido.map(r => r.codigo)));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas canceladas paginadas · página 0",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?estado=CANCELADA&page=0&size=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "CANCELADA"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Página 0: metadatos y mismo orden global del filtro', () => {",
+                  "  const p = pm.response.json();",
+                  "  const orden = JSON.parse(pm.collectionVariables.get('canceladasOrdenadas'));",
+                  "  pm.expect([p.pagina, p.tamanio, p.totalElementos, p.totalPaginas]).to.eql([0, 1, 3, 3]);",
+                  "  pm.expect(p.contenido.map(r => r.codigo)).to.eql(orden.slice(0, 1));",
+                  "  p.contenido.forEach(r => pm.expect(r.estado).to.eql('CANCELADA'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas canceladas paginadas · página 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?estado=CANCELADA&page=1&size=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "CANCELADA"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Página 1: metadatos y mismo orden global del filtro', () => {",
+                  "  const p = pm.response.json();",
+                  "  const orden = JSON.parse(pm.collectionVariables.get('canceladasOrdenadas'));",
+                  "  pm.expect([p.pagina, p.tamanio, p.totalElementos, p.totalPaginas]).to.eql([1, 1, 3, 3]);",
+                  "  pm.expect(p.contenido.map(r => r.codigo)).to.eql(orden.slice(1, 2));",
+                  "  p.contenido.forEach(r => pm.expect(r.estado).to.eql('CANCELADA'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas canceladas paginadas · página 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?estado=CANCELADA&page=2&size=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "CANCELADA"
+                },
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Página 2: metadatos y mismo orden global del filtro', () => {",
+                  "  const p = pm.response.json();",
+                  "  const orden = JSON.parse(pm.collectionVariables.get('canceladasOrdenadas'));",
+                  "  pm.expect([p.pagina, p.tamanio, p.totalElementos, p.totalPaginas]).to.eql([2, 1, 3, 3]);",
+                  "  pm.expect(p.contenido.map(r => r.codigo)).to.eql(orden.slice(2, 3));",
+                  "  p.contenido.forEach(r => pm.expect(r.estado).to.eql('CANCELADA'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas canceladas paginadas · página 3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?estado=CANCELADA&page=3&size=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "CANCELADA"
+                },
+                {
+                  "key": "page",
+                  "value": "3"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Página 3: metadatos y mismo orden global del filtro', () => {",
+                  "  const p = pm.response.json();",
+                  "  const orden = JSON.parse(pm.collectionVariables.get('canceladasOrdenadas'));",
+                  "  pm.expect([p.pagina, p.tamanio, p.totalElementos, p.totalPaginas]).to.eql([3, 1, 3, 3]);",
+                  "  pm.expect(p.contenido.map(r => r.codigo)).to.eql(orden.slice(3, 4));",
+                  "  p.contenido.forEach(r => pm.expect(r.estado).to.eql('CANCELADA'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar reservas por rango inclusivo de entrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservas?entradaDesde={{d20}}&entradaHasta={{d20}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservas"
+              ],
+              "query": [
+                {
+                  "key": "entradaDesde",
+                  "value": "{{d20}}"
+                },
+                {
+                  "key": "entradaHasta",
+                  "value": "{{d20}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenRecepcion}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye la reserva cuya entrada coincide con ambos límites', () => {",
+                  "  const { contenido } = pm.response.json();",
+                  "  pm.expect(contenido.map(r => r.codigo)).to.eql(['RES-2025-00001']);",
+                  "  pm.expect(contenido[0].fechaEntrada).to.eql(pm.collectionVariables.get('d20'));",
+                  "});"
                 ]
               }
             }
@@ -6804,7 +7160,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Listar reservas por titular → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Solo Carlos', () => pm.response.json().contenido.forEach(r => pm.expect(r.titularNombre).to.eql('Carlos Gómez')));"
+                  "pm.test('Resultados presentes y todos cumplen el filtro', () => { const c = pm.response.json().contenido; pm.expect(c).not.to.be.empty; c.forEach(r => pm.expect(r.titularNombre).to.eql(\"Carlos Gómez\")); });"
                 ]
               }
             }
@@ -6848,7 +7204,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Listar reservas por apartamento → 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Solo APT-301', () => pm.response.json().contenido.forEach(r => pm.expect(r.identificacionApartamento).to.eql('APT-301')));"
+                  "pm.test('Resultados presentes y todos cumplen el filtro', () => { const c = pm.response.json().contenido; pm.expect(c).not.to.be.empty; c.forEach(r => pm.expect(r.identificacionApartamento).to.eql(\"APT-301\")); });"
                 ]
               }
             }

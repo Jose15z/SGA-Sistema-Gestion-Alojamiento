@@ -222,10 +222,10 @@ Cada regla indica dónde se implementa (siempre en el dominio), la prueba unitar
 Luego, con la aplicación recién arrancada, importar la colección en Postman y ejecutarla completa (Runner), o con Newman:
 
 ```bash
-npx newman run docs/pruebas/SGA-Entrega2.postman_collection.json
+npx --yes newman@6.2.1 run docs/pruebas/SGA-Entrega2.postman_collection.json
 ```
 
-Resultado verificado el 31 de octubre de 2026: 489 pruebas de JUnit sin fallos (26 nuevas con Mockito para crear, cancelar, modificar, salida, no-show y vencimiento, más seis de contrato y validación HTTP), y 179 solicitudes con 334 aserciones de Newman sin fallos sobre una aplicación recién arrancada.
+El 14 de noviembre de 2026 se ejecutó la colección completa con Newman 6.2.1. Pasaron 185 solicitudes y 349 aserciones. La [evidencia de ejecución](pruebas/VERIFICACION_ENTREGA_2.md) incluye los resultados de filtros, orden y navegación entre páginas.
 
 El [plan de cierre](PLAN_CIERRE_ENTREGA_2.md) registra la revisión de la rúbrica, los datos pendientes y la propuesta de reparto para el equipo.
 
