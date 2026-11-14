@@ -73,10 +73,10 @@ La recuperación de contraseña usa un notificador local: el código de 6 dígit
 Con la aplicación **recién arrancada**, importar la colección en Postman y ejecutarla completa con el Runner, o desde la terminal:
 
 ```bash
-npx newman run docs/pruebas/SGA-Entrega2.postman_collection.json
+npx --yes newman@6.2.1 run docs/pruebas/SGA-Entrega2.postman_collection.json
 ```
 
-Cubre usuarios y roles, el alojamiento, el flujo completo de una reserva (incluida su modificación), la operación diaria, un 409 por cada regla que expone la API y los 400, 401, 403 y 404 (179 solicitudes, 334 aserciones). Para repetirla, reinicie la aplicación: la base H2 vive en memoria.
+Cubre usuarios y roles, el alojamiento, el flujo completo de una reserva (incluida su modificación), la operación diaria, un 409 por cada regla que expone la API y los 400, 401, 403 y 404 (185 solicitudes y 349 aserciones sin fallos). Reinicie la aplicación entre corridas para restablecer H2. Consulte los [resultados de la ejecución completa y de los listados paginados](docs/pruebas/VERIFICACION_ENTREGA_2.md).
 
 ## Arquitectura
 
