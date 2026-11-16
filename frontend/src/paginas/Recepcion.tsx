@@ -1,8 +1,15 @@
+import { EncabezadoPagina } from '../componentes/EncabezadoPagina';
+import { PantallaPendiente } from '../componentes/PantallaPendiente';
+
 export default function Recepcion() {
   return (
     <section>
-      <h1>Recepción</h1>
-      <p>Llegadas y salidas del día, reservas por canal directo y folios (7.1, 7.6).</p>
+      <EncabezadoPagina
+        antetitulo="OPERACIÓN DIARIA"
+        titulo="Recepción del día"
+        descripcion="Llegadas y salidas previstas: registro de llegada (check-in), salida (check-out) y no-show."
+      />
+      <PantallaPendiente mockup="06-recepcion-del-dia.png" />
     </section>
   );
 }
