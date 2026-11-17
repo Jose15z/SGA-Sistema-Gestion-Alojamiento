@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router';
 import DisenoAcceso from './disenos/DisenoAcceso';
 import DisenoAplicacion from './disenos/DisenoAplicacion';
-import Administracion from './paginas/Administracion';
 import DetalleApartamento from './paginas/DetalleApartamento';
 import DetalleReserva from './paginas/DetalleReserva';
 import Folio from './paginas/Folio';
@@ -15,7 +14,6 @@ import Preparacion from './paginas/Preparacion';
 import Recepcion from './paginas/Recepcion';
 import Registro from './paginas/Registro';
 import RecuperarContrasena from './paginas/RecuperarContrasena';
-import Reportes from './paginas/Reportes';
 import ReservasYFolios from './paginas/ReservasYFolios';
 import UsuariosInternos from './paginas/UsuariosInternos';
 
@@ -48,9 +46,9 @@ export default function App() {
 
         {/* Personal de servicio y administración */}
         <Route path="/preparacion" element={<Preparacion />} />
-        <Route path="/administracion" element={<Administracion />} />
+        <Route path="/administracion" element={<Navigate to="/administracion/usuarios" replace />} />
         <Route path="/administracion/usuarios" element={<UsuariosInternos />} />
-        <Route path="/reportes" element={<Reportes />} />
+        <Route path="/reportes" element={<Navigate to="/recepcion" replace />} />
 
         <Route path="*" element={<NoEncontrada />} />
       </Route>

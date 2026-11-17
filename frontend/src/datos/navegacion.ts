@@ -21,12 +21,10 @@ export const navegacionPorRol: Record<Rol, OpcionNavegacion[]> = {
   ],
   PERSONAL_SERVICIO: [{ ruta: '/preparacion', etiqueta: 'Preparación', icono: 'destello' }],
   ADMINISTRADOR: [
-    { ruta: '/administracion', etiqueta: 'Administración', icono: 'edificio' },
     { ruta: '/administracion/usuarios', etiqueta: 'Usuarios', icono: 'usuarios' },
     { ruta: '/recepcion', etiqueta: 'Operación diaria', icono: 'calendario' },
     { ruta: '/recepcion/nueva-reserva', etiqueta: 'Nueva reserva', icono: 'mas' },
-    { ruta: '/reportes', etiqueta: 'Reportes', icono: 'grafica' },
-    { ruta: '/preparacion', etiqueta: 'Estado operativo', icono: 'destello' },
+    { ruta: '/preparacion', etiqueta: 'Preparación', icono: 'destello' },
   ],
 };
 
@@ -69,8 +67,6 @@ const titulosPorSeccion: [string, string][] = [
   ['/recepcion', 'Recepción del día'],
   ['/preparacion', 'Preparación'],
   ['/administracion/usuarios', 'Usuarios'],
-  ['/administracion', 'Administración'],
-  ['/reportes', 'Reportes'],
 ];
 
 export function tituloDeSeccion(ruta: string): string {
