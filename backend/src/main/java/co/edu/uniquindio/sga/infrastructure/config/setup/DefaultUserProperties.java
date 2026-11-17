@@ -1,6 +1,5 @@
 package co.edu.uniquindio.sga.infrastructure.config.setup;
 
-import co.edu.uniquindio.sga.application.seguridad.PoliticaContrasena;
 import co.edu.uniquindio.sga.application.seguridad.Rol;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -22,5 +21,5 @@ public record DefaultUserProperties(@NotEmpty List<@Valid UsuarioInicial> usuari
             @NotBlank @Size(max = 150) String nombreCompleto,
             @NotBlank @Size(max = 30) String telefono,
             @NotNull Rol rol,
-            @NotBlank @Pattern(regexp = PoliticaContrasena.PATRON) String contrasena) { }
+            String contrasena) { }
 }
