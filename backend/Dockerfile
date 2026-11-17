@@ -11,4 +11,4 @@ WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=render
 USER 10001
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50", "-XX:TieredStopAtLevel=1", "-jar", "app.jar"]

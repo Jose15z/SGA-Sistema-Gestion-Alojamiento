@@ -4,5 +4,5 @@ import axios from 'axios';
 const apiUrl = import.meta.env.VITE_API_URL;
 export const api = axios.create({
   baseURL: apiUrl || 'http://localhost:8080/api',
-  timeout: apiUrl ? 75_000 : 10_000,
+  timeout: apiUrl ? 120_000 : 10_000,
 });
