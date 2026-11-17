@@ -1,5 +1,6 @@
 package co.edu.uniquindio.sga.infrastructure.config.setup;
 
+import co.edu.uniquindio.sga.application.seguridad.PoliticaContrasena;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.entity.UsuarioEntity;
 import co.edu.uniquindio.sga.infrastructure.persistence.jpa.repository.UsuarioJpaDataRepository;
 import org.slf4j.Logger;
@@ -34,6 +35,8 @@ public class DefaultUserInitializer implements ApplicationRunner {
         for (var dato : propiedades.usuarios()) {
             String correo = dato.correo().trim().toLowerCase(java.util.Locale.ROOT);
             if (usuarios.existsByCorreo(correo)) { continue; }
+            // El error de validación identifica la regla sin incluir el secreto en los logs.
+            PoliticaContrasena.verificar(dato.contrasena());
             UsuarioEntity usuario = new UsuarioEntity();
             usuario.setIdentificacion(dato.identificacion());
             usuario.setCorreo(correo);
@@ -47,6 +50,6 @@ public class DefaultUserInitializer implements ApplicationRunner {
             usuarios.save(usuario);
             cargados++;
         }
-        LOG.info("Usuarios iniciales cargados en H2: {}", cargados);
+        LOG.info("Usuarios iniciales cargados: {}", cargados);
     }
 }
