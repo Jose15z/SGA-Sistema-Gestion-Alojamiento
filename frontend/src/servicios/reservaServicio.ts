@@ -34,7 +34,7 @@ export async function consultarMovimientosDelDia(fecha: string): Promise<Movimie
 
 // GET /api/reservas/{codigo}
 export async function consultarReserva(codigo: string): Promise<ReservaDetalle> {
-  const respuesta = await api.get<ReservaDetalle>(`/reservas/${codigo}`, conSesion());
+  const respuesta = await api.get<ReservaDetalle>(`/reservas/${encodeURIComponent(codigo)}`, conSesion());
   return respuesta.data;
 }
 
@@ -42,12 +42,46 @@ export async function consultarReserva(codigo: string): Promise<ReservaDetalle> 
 type Accion = 'confirmar' | 'registrar-llegada' | 'registrar-salida' | 'no-show';
 
 export async function cambiarEstadoReserva(codigo: string, accion: Accion): Promise<ReservaDetalle> {
-  const respuesta = await api.put<ReservaDetalle>(`/reservas/${codigo}/${accion}`, null, conSesion());
+  const respuesta = await api.put<ReservaDetalle>(`/reservas/${encodeURIComponent(codigo)}/${accion}`, null, conSesion());
   return respuesta.data;
 }
 
 // PUT /api/reservas/{codigo}/cancelar
 export async function cancelarReserva(codigo: string, motivo: string): Promise<ReservaDetalle> {
-  const respuesta = await api.put<ReservaDetalle>(`/reservas/${codigo}/cancelar`, { motivo }, conSesion());
+  const respuesta = await api.put<ReservaDetalle>(
+    `/reservas/${encodeURIComponent(codigo)}/cancelar`,
+    { motivo },
+    conSesion(),
+  );
+  return respuesta.data;
+}
+
+// PUT /api/reservas/{codigo}/hora-llegada: registra o actualiza hora estimada de llegada (HH:mm).
+export async function indicarHoraLlegada(codigo: string, horaEstimadaLlegada: string): Promise<ReservaDetalle> {
+  const respuesta = await api.put<ReservaDetalle>(
+    `/reservas/${encodeURIComponent(codigo)}/hora-llegada`,
+    { horaEstimadaLlegada },
+    conSesion(),
+  );
+  return respuesta.data;
+}
+
+// PUT /api/reservas/{codigo}/novedad-llegada: informa novedad de llegada (solo reserva CONFIRMADA).
+export async function informarNovedadLlegada(codigo: string, novedad: string): Promise<ReservaDetalle> {
+  const respuesta = await api.put<ReservaDetalle>(
+    `/reservas/${encodeURIComponent(codigo)}/novedad-llegada`,
+    { novedad },
+    conSesion(),
+  );
+  return respuesta.data;
+}
+
+// POST /api/reservas/{codigo}/vehiculos: asocia un vehículo a la reserva (máx. 2, RP-02).
+export async function registrarVehiculo(codigo: string, placa: string): Promise<ReservaDetalle> {
+  const respuesta = await api.post<ReservaDetalle>(
+    `/reservas/${encodeURIComponent(codigo)}/vehiculos`,
+    { placa },
+    conSesion(),
+  );
   return respuesta.data;
 }
