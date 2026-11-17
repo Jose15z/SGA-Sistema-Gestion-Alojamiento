@@ -1,0 +1,4 @@
+.git
+.gradle
+build
+src/main/resources/application-secrets.properties

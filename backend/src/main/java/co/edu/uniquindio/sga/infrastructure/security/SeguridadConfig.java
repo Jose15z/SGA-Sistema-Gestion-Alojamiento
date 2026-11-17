@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -47,9 +48,10 @@ public class SeguridadConfig {
      * de la API si el backend lo autoriza. DELETE se incluye porque la API lo usa para desactivar usuarios.
      */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${sga.cors.origen:http://localhost:5173}") String origen) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(origen));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -60,10 +62,12 @@ public class SeguridadConfig {
     @Bean
     public SecurityFilterChain cadenaSeguridad(HttpSecurity http, RespuestaErrorSeguridad errores,
                                                JwtAuthenticationConverter convertidor,
+                                               @Qualifier("corsConfigurationSource")
+                                               CorsConfigurationSource corsConfigurationSource,
                                                @Value("${sga.seguridad.herramientas-desarrollo:false}") boolean desarrollo) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))   // Guía 15: el frontend de Vite
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))   // Guía 15: el frontend de Vite
                 .sessionManagement(sesion -> sesion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(cabeceras -> cabeceras.frameOptions(opciones -> opciones.sameOrigin()))
                 .authorizeHttpRequests(rutas -> {
