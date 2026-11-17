@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router';
+import { EncabezadoPagina } from '../componentes/EncabezadoPagina';
 import { apartamentosEjemplo } from '../datos/apartamentosEjemplo';
 
 export default function DetalleApartamento() {
@@ -12,11 +13,14 @@ export default function DetalleApartamento() {
 
   return (
     <section>
-      <h1>{apartamento.nombre}</h1>
-      <p>Identificación: {apartamento.identificacion}</p>
+      <EncabezadoPagina
+        antetitulo={`${apartamento.identificacion} · APARTAMENTO COMPLETO`}
+        titulo={apartamento.nombre}
+        descripcion="Detalle, calendario y cotización. Diseño de referencia: mockups/pantallas/04-detalle-apartamento.png"
+      />
       <p>Dormitorios: {apartamento.dormitorios}</p>
       <p>Capacidad: {apartamento.capacidad} personas</p>
-      <Link to="/">Volver</Link>
+      <Link to="/apartamentos">Volver</Link>
     </section>
   );
 }

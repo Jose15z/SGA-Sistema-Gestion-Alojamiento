@@ -1,8 +1,15 @@
+import { EncabezadoPagina } from '../componentes/EncabezadoPagina';
+import { PantallaPendiente } from '../componentes/PantallaPendiente';
+
 export default function Administracion() {
   return (
     <section>
-      <h1>Administración</h1>
-      <p>Apartamentos, temporadas, tarifas, política de cancelación, usuarios y datos del alojamiento (7.1).</p>
+      <EncabezadoPagina
+        antetitulo="ADMINISTRACIÓN"
+        titulo="Administración"
+        descripcion="Apartamentos, temporadas y tarifas, política de cancelación, bloqueos y usuarios."
+      />
+      <PantallaPendiente mockup="10-admin-apartamentos.png" />
     </section>
   );
 }

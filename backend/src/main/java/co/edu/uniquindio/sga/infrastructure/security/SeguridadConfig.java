@@ -22,6 +22,9 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -39,12 +42,28 @@ public class SeguridadConfig {
     private static final String SERVICIO = "PERSONAL_SERVICIO";
     private static final String HUESPED = "HUESPED";
 
+    /**
+     * Guía 15 (4.2): el navegador solo deja que el frontend (servidor de Vite) lea las respuestas
+     * de la API si el backend lo autoriza. DELETE se incluye porque la API lo usa para desactivar usuarios.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain cadenaSeguridad(HttpSecurity http, RespuestaErrorSeguridad errores,
                                                JwtAuthenticationConverter convertidor,
                                                @Value("${sga.seguridad.herramientas-desarrollo:false}") boolean desarrollo) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))   // Guía 15: el frontend de Vite
                 .sessionManagement(sesion -> sesion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(cabeceras -> cabeceras.frameOptions(opciones -> opciones.sameOrigin()))
                 .authorizeHttpRequests(rutas -> {

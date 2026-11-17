@@ -3,5 +3,9 @@
 const ANIO_ACTUAL = new Date().getFullYear();
 
 export function PiePagina() {
-  return <footer>© {ANIO_ACTUAL} Universidad del Quindío — Programación Avanzada</footer>;
+  return (
+    <footer className="pie-pagina">
+      © {ANIO_ACTUAL} Siete Raíces · Universidad del Quindío — Programación Avanzada
+    </footer>
+  );
 }

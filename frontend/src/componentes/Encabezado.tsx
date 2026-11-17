@@ -1,24 +1,37 @@
 import { Link } from 'react-router';
+import { Icono } from './Icono';
 
 interface EncabezadoProps {
-  nombreAlojamiento: string;
+  titulo: string;
+  // La recepción y la administración crean reservas por el canal directo.
+  mostrarNuevaReserva: boolean;
+  menuAbierto: boolean;
+  onAbrirMenu: () => void;
 }
 
-export function Encabezado({ nombreAlojamiento }: EncabezadoProps) {
+export function Encabezado({ titulo, mostrarNuevaReserva, menuAbierto, onAbrirMenu }: EncabezadoProps) {
   return (
-    <header>
-      <p>{nombreAlojamiento}</p>
-      <nav>
-        <ul>
-          <li><Link to="/">Inicio</Link></li>
-          <li><Link to="/login">Ingresar</Link></li>
-          <li><Link to="/registro">Registrarse</Link></li>
-          <li><Link to="/mis-reservas">Mis reservas</Link></li>
-          <li><Link to="/recepcion">Recepción</Link></li>
-          <li><Link to="/preparacion">Preparación</Link></li>
-          <li><Link to="/administracion">Administración</Link></li>
-        </ul>
-      </nav>
+    <header className="topbar">
+      <button
+        className="menu-button"
+        onClick={onAbrirMenu}
+        aria-label="Abrir menú"
+        aria-expanded={menuAbierto}
+        aria-controls="barra-lateral"
+      >
+        <Icono nombre="menu" />
+      </button>
+      <div>
+        <strong>{titulo}</strong>
+        <span>Armenia, Quindío</span>
+      </div>
+      <div className="top-actions">
+        {mostrarNuevaReserva && (
+          <Link className="primary compact" to="/recepcion/nueva-reserva">
+            <Icono nombre="mas" /> Nueva reserva
+          </Link>
+        )}
+      </div>
     </header>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { EncabezadoPagina } from '../componentes/EncabezadoPagina';
 import { TarjetaApartamento } from '../componentes/TarjetaApartamento';
 import { apartamentosEjemplo } from '../datos/apartamentosEjemplo';
 
@@ -10,7 +11,11 @@ export default function Inicio() {
 
   return (
     <section>
-      <h1>Apartamentos</h1>
+      <EncabezadoPagina
+        antetitulo="DISPONIBILIDAD"
+        titulo="Apartamentos"
+        descripcion="Búsqueda por fechas y grupo. Diseño de referencia: mockups/pantallas/03-buscar-apartamentos.png"
+      />
 
       <label>
         Personas:{' '}
