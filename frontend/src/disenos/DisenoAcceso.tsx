@@ -1,12 +1,20 @@
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { Etiqueta } from '../componentes/Etiqueta';
 import { Icono } from '../componentes/Icono';
 import { Marca } from '../componentes/Marca';
+import { inicioDeRol } from '../datos/navegacion';
+import { leerSesion } from '../servicios/sesion';
 
 // Estructura del login y el registro: foto del alojamiento a la izquierda y el formulario a la derecha.
 export default function DisenoAcceso() {
   const { pathname } = useLocation();
   const esRegistro = pathname === '/registro';
+
+  // Quien ya tiene sesión no necesita ingresar otra vez: va a la pantalla de su rol.
+  const sesion = leerSesion();
+  if (sesion) {
+    return <Navigate to={inicioDeRol(sesion.rol)} replace />;
+  }
 
   return (
     <main className="auth-shell">

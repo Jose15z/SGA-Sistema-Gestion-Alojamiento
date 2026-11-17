@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { BarraLateral } from '../componentes/BarraLateral';
 import { Encabezado } from '../componentes/Encabezado';
 import { PiePagina } from '../componentes/PiePagina';
-import { navegacionPorRol, rolDeRuta, tituloDeSeccion } from '../datos/navegacion';
-import type { Rol } from '../modelos/rol';
+import { inicioDeRol, rutaPermitida, tituloDeSeccion } from '../datos/navegacion';
+import { borrarSesion, leerSesion } from '../servicios/sesion';
 
 // Estructura de las pantallas internas: barra lateral por rol, barra superior y contenido.
 export default function DisenoAplicacion() {
   const { pathname } = useLocation();
   const navegar = useNavigate();
-
-  // Mientras no hay sesión (Guía 15), el rol se escoge en la barra lateral.
-  const [rol, setRol] = useState<Rol>(() => rolDeRuta(pathname));
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   // Con el menú abierto en el celular, la tecla Esc lo cierra.
@@ -25,9 +22,19 @@ export default function DisenoAplicacion() {
     return () => window.removeEventListener('keydown', alPresionarTecla);
   }, [menuAbierto]);
 
-  function cambiarRol(nuevoRol: Rol) {
-    setRol(nuevoRol);
-    navegar(navegacionPorRol[nuevoRol][0].ruta);
+  // Sin sesión (o con el token vencido) se vuelve al login, recordando a dónde se quería ir.
+  const sesion = leerSesion();
+  if (!sesion) {
+    return <Navigate to="/login" replace state={{ desde: pathname }} />;
+  }
+  // Cada rol solo ve sus pantallas; el backend igual rechaza con 403 lo que no le corresponde.
+  if (!rutaPermitida(sesion.rol, pathname)) {
+    return <Navigate to={inicioDeRol(sesion.rol)} replace />;
+  }
+
+  function cerrarSesion() {
+    borrarSesion();
+    navegar('/login', { replace: true });
   }
 
   return (
@@ -36,17 +43,18 @@ export default function DisenoAplicacion() {
         Saltar al contenido
       </a>
       <BarraLateral
-        rol={rol}
+        rol={sesion.rol}
+        correo={sesion.correo}
         abierta={menuAbierto}
-        onCambiarRol={cambiarRol}
         onCerrar={() => setMenuAbierto(false)}
+        onCerrarSesion={cerrarSesion}
       />
       {menuAbierto && <div className="scrim" onClick={() => setMenuAbierto(false)} />}
 
       <main className="main">
         <Encabezado
           titulo={tituloDeSeccion(pathname)}
-          mostrarNuevaReserva={rol === 'RECEPCIONISTA' || rol === 'ADMINISTRADOR'}
+          mostrarNuevaReserva={sesion.rol === 'RECEPCIONISTA' || sesion.rol === 'ADMINISTRADOR'}
           menuAbierto={menuAbierto}
           onAbrirMenu={() => setMenuAbierto(true)}
         />

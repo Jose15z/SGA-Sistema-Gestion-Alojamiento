@@ -14,8 +14,10 @@ import NuevaReservaDirecta from './paginas/NuevaReservaDirecta';
 import Preparacion from './paginas/Preparacion';
 import Recepcion from './paginas/Recepcion';
 import Registro from './paginas/Registro';
+import RecuperarContrasena from './paginas/RecuperarContrasena';
 import Reportes from './paginas/Reportes';
 import ReservasYFolios from './paginas/ReservasYFolios';
+import UsuariosInternos from './paginas/UsuariosInternos';
 
 export default function App() {
   return (
@@ -24,11 +26,12 @@ export default function App() {
       <Route element={<DisenoAcceso />}>
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/recuperar" element={<RecuperarContrasena />} />
       </Route>
 
-      {/* Pantallas internas, con la barra lateral por rol */}
+      {/* Pantallas internas: exigen sesión y muestran solo las del rol de la cuenta */}
       <Route element={<DisenoAplicacion />}>
-        <Route index element={<Navigate to="/apartamentos" replace />} />
+        <Route index element={<Navigate to="/login" replace />} />
 
         {/* Huésped */}
         <Route path="/apartamentos" element={<Inicio />} />
@@ -46,6 +49,7 @@ export default function App() {
         {/* Personal de servicio y administración */}
         <Route path="/preparacion" element={<Preparacion />} />
         <Route path="/administracion" element={<Administracion />} />
+        <Route path="/administracion/usuarios" element={<UsuariosInternos />} />
         <Route path="/reportes" element={<Reportes />} />
 
         <Route path="*" element={<NoEncontrada />} />

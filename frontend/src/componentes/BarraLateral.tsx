@@ -1,27 +1,22 @@
 import { Link, NavLink } from 'react-router';
-import { navegacionPorRol } from '../datos/navegacion';
+import { inicioDeRol, navegacionPorRol } from '../datos/navegacion';
 import { nombreRol, type Rol } from '../modelos/rol';
 import { Icono } from './Icono';
 import { Marca } from './Marca';
 
-// Usuario de ejemplo por rol mientras no hay sesión (la sesión llega en la Guía 15).
-const usuarioEjemplo: Record<Rol, { nombre: string; iniciales: string }> = {
-  HUESPED: { nombre: 'Ana Ramírez', iniciales: 'AR' },
-  RECEPCIONISTA: { nombre: 'Mateo Ríos', iniciales: 'MR' },
-  PERSONAL_SERVICIO: { nombre: 'Luisa Sánchez', iniciales: 'LS' },
-  ADMINISTRADOR: { nombre: 'Admin SGA', iniciales: 'AD' },
-};
-
 interface BarraLateralProps {
   rol: Rol;
+  correo: string;
   abierta: boolean;
-  onCambiarRol: (rol: Rol) => void;
   onCerrar: () => void;
+  onCerrarSesion: () => void;
 }
 
-export function BarraLateral({ rol, abierta, onCambiarRol, onCerrar }: BarraLateralProps) {
-  const usuario = usuarioEjemplo[rol];
-  const roles = Object.keys(nombreRol) as Rol[];
+// Las opciones con subpantallas propias se marcan solo en su ruta exacta.
+const rutasExactas = new Set(['/recepcion', '/administracion']);
+
+export function BarraLateral({ rol, correo, abierta, onCerrar, onCerrarSesion }: BarraLateralProps) {
+  const iniciales = correo.slice(0, 2).toUpperCase();
 
   return (
     <aside id="barra-lateral" className={`sidebar ${abierta ? 'open' : ''}`}>
@@ -29,33 +24,20 @@ export function BarraLateral({ rol, abierta, onCambiarRol, onCerrar }: BarraLate
         <Icono nombre="cerrar" />
       </button>
 
-      <Link className="brand" to={navegacionPorRol[rol][0].ruta} onClick={onCerrar}>
+      <Link className="brand" to={inicioDeRol(rol)} onClick={onCerrar}>
         <Marca />
       </Link>
 
-      <label className="demo-label" htmlFor="selector-rol">
-        ESPACIO DE TRABAJO
-      </label>
-      <div className="role-select-wrap">
+      {/* El rol lo define la cuenta con la que se ingresó: se muestra, no se escoge. */}
+      <span className="demo-label">ESPACIO DE TRABAJO</span>
+      <div className="role-select-wrap rol-sesion" title="Rol de la cuenta con la que ingresó">
         <Icono nombre="escudo" tamano={18} />
-        <select
-          id="selector-rol"
-          value={rol}
-          onChange={(e) => onCambiarRol(e.target.value as Rol)}
-          title="Cambiar el espacio de trabajo según el rol"
-        >
-          {roles.map((r) => (
-            <option key={r} value={r}>
-              {nombreRol[r]}
-            </option>
-          ))}
-        </select>
-        <Icono nombre="desplegar" tamano={15} />
+        <span>{nombreRol[rol]}</span>
       </div>
 
       <nav className="main-nav" aria-label="Principal">
         {navegacionPorRol[rol].map((opcion) => (
-          <NavLink key={opcion.ruta} to={opcion.ruta} end={opcion.ruta === '/recepcion'} onClick={onCerrar}>
+          <NavLink key={opcion.ruta} to={opcion.ruta} end={rutasExactas.has(opcion.ruta)} onClick={onCerrar}>
             <Icono nombre={opcion.icono} />
             <span>{opcion.etiqueta}</span>
           </NavLink>
@@ -63,14 +45,14 @@ export function BarraLateral({ rol, abierta, onCambiarRol, onCerrar }: BarraLate
       </nav>
 
       <div className="profile">
-        <span className="avatar">{usuario.iniciales}</span>
+        <span className="avatar">{iniciales}</span>
         <span>
-          <strong>{usuario.nombre}</strong>
+          <strong>{correo}</strong>
           <small>{nombreRol[rol]}</small>
         </span>
-        <Link to="/login" aria-label="Cerrar sesión" title="Cerrar sesión" className="profile-salir">
+        <button type="button" onClick={onCerrarSesion} aria-label="Cerrar sesión" title="Cerrar sesión" className="profile-salir">
           <Icono nombre="salir" tamano={18} />
-        </Link>
+        </button>
       </div>
     </aside>
   );

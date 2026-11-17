@@ -1952,7 +1952,10 @@ p {
   accent-color: var(--green);
 }
 .auth-options button,
-.auth-switch button {
+.auth-options a,
+.auth-switch button,
+.auth-switch a {
+  text-decoration: none;
   border: 0;
   background: transparent;
   color: var(--green);
@@ -2855,4 +2858,45 @@ textarea {
 }
 .scrim {
   cursor: pointer;
+}
+
+/* El rol de la sesión se muestra con el estilo del selector del diseño, pero no se puede cambiar. */
+.rol-sesion {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: default;
+}
+.rol-sesion:hover {
+  border-color: #356253;
+  background: #194838;
+}
+.profile-salir {
+  border: 0;
+  background: transparent;
+  color: #9bb5ab;
+  padding: 4px;
+}
+.auth-options a:hover,
+.auth-switch a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-switch a {
+  font-size: 10px;
+}
+.auth-options a {
+  font-size: 9px;
+}
+
+.form-section .form-error,
+.form-section .form-message,
+.form-section .button-row {
+  margin-top: 14px;
+}
+
+/* En los campos con ícono, el borde rojo lo lleva la caja exterior, no el input de adentro. */
+.auth-input [aria-invalid='true'] {
+  border: 0 !important;
+  box-shadow: none !important;
 }
