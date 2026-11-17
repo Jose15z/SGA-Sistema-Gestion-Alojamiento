@@ -21,3 +21,75 @@ export interface Apartamento {
   activo: boolean;
   tarifas: { temporada: 'BASE' | 'ALTA' | 'ESPECIAL'; valorPorOcupanteNoche: number }[];
 }
+
+export type UnidadCobro = 'POR_SOLICITUD' | 'POR_PERSONA' | 'POR_NOCHE';
+
+// Espejo de: record ServicioAdicionalResponse(...)
+export interface ServicioAdicional {
+  codigo: string;
+  nombre: string;
+  generaCargo: boolean;
+  valor: number;
+  unidad: UnidadCobro;
+}
+
+// Espejo de: record AlojamientoResponse(...) — GET /api/alojamiento
+export interface Alojamiento {
+  nombre: string;
+  descripcion: string;
+  ciudad: string;
+  direccion: string;
+  latitud: number;
+  longitud: number;
+  horaEntrada: string;
+  horaSalida: string;
+  normas: string[];
+  servicios: ServicioAdicional[];
+}
+
+// Espejo de: record TramoCancelacionResponse(...)
+export interface TramoCancelacion {
+  antelacionMinimaHoras: number;
+  porcentaje: number;
+}
+
+// Espejo de: record PoliticaCancelacionResponse(...) — GET /api/politicas-cancelacion/vigente
+export interface PoliticaCancelacion {
+  version: number;
+  tramos: TramoCancelacion[];
+  porcentajeNoShow: number;
+  horaEntrada: string;
+}
+
+// Espejo de: record ApartamentoDisponibleResponse(...) — GET /api/apartamentos/disponibles
+export interface ApartamentoDisponible {
+  identificacion: string;
+  nombre: string;
+  descripcion: string;
+  dormitorios: number;
+  capacidadMaxima: number;
+  caracteristicas: string[];
+  noches: number;
+  valorEstimado: number;
+}
+
+// Parámetros de consulta de GET /api/apartamentos/disponibles
+export interface FiltroDisponibles {
+  fechaEntrada: string;
+  fechaSalida: string;
+  totalOcupantes: number;
+  fechasNacimiento?: string[];
+  capacidadMinima?: number;
+  dormitoriosMinimos?: number;
+  precioMinimo?: number;
+  precioMaximo?: number;
+  caracteristicas?: string[];
+  page?: number;
+  size?: number;
+}
+
+export const nombreUnidadCobro: Record<UnidadCobro, string> = {
+  POR_SOLICITUD: 'Por solicitud',
+  POR_PERSONA: 'Por persona',
+  POR_NOCHE: 'Por noche',
+};
