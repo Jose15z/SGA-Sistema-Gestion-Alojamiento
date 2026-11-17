@@ -3,6 +3,7 @@ import type {
   Apartamento,
   ApartamentoDisponible,
   FiltroDisponibles,
+  NocheCalendario,
   PoliticaCancelacion,
 } from '../modelos/apartamento';
 import type { Cotizacion, CotizacionRequest, Pagina } from '../modelos/reserva';
@@ -20,8 +21,8 @@ export async function listarApartamentos(): Promise<Apartamento[]> {
 }
 
 // POST /api/cotizaciones: valor de una estancia según las temporadas y los ocupantes facturables
-export async function cotizarEstancia(datos: CotizacionRequest): Promise<Cotizacion> {
-  const respuesta = await api.post<Cotizacion>('/cotizaciones', datos);
+export async function cotizarEstancia(datos: CotizacionRequest, signal?: AbortSignal): Promise<Cotizacion> {
+  const respuesta = await api.post<Cotizacion>('/cotizaciones', datos, { signal });
   return respuesta.data;
 }
 
@@ -48,5 +49,28 @@ export async function buscarApartamentosDisponibles(
     paramsSerializer: { indexes: null },
     signal,
   });
+  return respuesta.data;
+}
+
+// GET /api/apartamentos/{identificacion}: detalle completo del apartamento (público).
+export async function consultarApartamento(identificacion: string, signal?: AbortSignal): Promise<Apartamento> {
+  const respuesta = await api.get<Apartamento>(`/apartamentos/${encodeURIComponent(identificacion)}`, { signal });
+  return respuesta.data;
+}
+
+// GET /api/apartamentos/{identificacion}/calendario: disponibilidad nocturna en [desde, hasta) (público).
+export async function consultarCalendarioApartamento(
+  identificacion: string,
+  desde: string,
+  hasta: string,
+  signal?: AbortSignal,
+): Promise<NocheCalendario[]> {
+  const respuesta = await api.get<NocheCalendario[]>(
+    `/apartamentos/${encodeURIComponent(identificacion)}/calendario`,
+    {
+      params: { desde, hasta },
+      signal,
+    },
+  );
   return respuesta.data;
 }

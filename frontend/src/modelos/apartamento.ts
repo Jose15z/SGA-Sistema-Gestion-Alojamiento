@@ -93,3 +93,36 @@ export const nombreUnidadCobro: Record<UnidadCobro, string> = {
   POR_PERSONA: 'Por persona',
   POR_NOCHE: 'Por noche',
 };
+
+export type TipoTemporada = 'BASE' | 'ALTA' | 'ESPECIAL';
+
+export type EstadoNoche = 'DISPONIBLE' | 'RESERVADA' | 'BLOQUEADA' | 'EN_PREPARACION' | 'NO_VENDIBLE';
+
+// Espejo de: record NocheCalendarioResponse(...) — GET /api/apartamentos/{identificacion}/calendario
+export interface NocheCalendario {
+  noche: string;
+  estado: EstadoNoche;
+  reserva: string | null;
+}
+
+export const nombreEstadoOperativo: Record<EstadoOperativo, string> = {
+  PREPARADO: 'Preparado',
+  OCUPADO: 'Ocupado',
+  PENDIENTE_PREPARACION: 'Pendiente de preparación',
+  EN_PREPARACION: 'En preparación',
+  FUERA_DE_SERVICIO: 'Fuera de servicio',
+};
+
+export const nombreTemporada: Record<TipoTemporada, string> = {
+  BASE: 'Base',
+  ALTA: 'Alta',
+  ESPECIAL: 'Especial',
+};
+
+export const nombreEstadoNoche: Record<EstadoNoche, string> = {
+  DISPONIBLE: 'Disponible',
+  RESERVADA: 'Reservada',
+  BLOQUEADA: 'Bloqueada',
+  EN_PREPARACION: 'En preparación',
+  NO_VENDIBLE: 'No vendible',
+};
