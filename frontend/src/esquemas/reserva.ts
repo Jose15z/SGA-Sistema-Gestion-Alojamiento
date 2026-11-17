@@ -110,3 +110,42 @@ export function crearEsquemaReservaHuesped(documentoTitular: string, capacidadMa
 }
 
 export type FormularioReservaHuesped = z.infer<ReturnType<typeof crearEsquemaReservaHuesped>>;
+
+export const esquemaBuscarReservaCodigo = z.object({
+  codigo: z
+    .string()
+    .trim()
+    .transform((v) => v.toUpperCase())
+    .pipe(z.string().regex(/^RES-[0-9]{4}-[0-9]{5}$/, 'Formato esperado: RES-AAAA-NNNNN (ej. RES-2026-00001)')),
+});
+
+export type FormularioBuscarReservaCodigo = z.infer<typeof esquemaBuscarReservaCodigo>;
+
+export const esquemaHoraLlegada = z.object({
+  horaEstimadaLlegada: z
+    .string()
+    .min(1, 'Indique la hora estimada de llegada')
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Ingrese una hora válida en formato HH:mm'),
+});
+
+export type FormularioHoraLlegada = z.infer<typeof esquemaHoraLlegada>;
+
+export const esquemaNovedadLlegada = z.object({
+  novedad: z.string().trim().min(1, 'Describa la novedad de llegada').max(300, 'Máximo 300 caracteres'),
+});
+
+export type FormularioNovedadLlegada = z.infer<typeof esquemaNovedadLlegada>;
+
+export const esquemaRegistrarVehiculo = z.object({
+  placa: z
+    .string()
+    .trim()
+    .transform((v) => v.toUpperCase())
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-Za-z0-9 -]{5,9}$/, 'Ingrese una placa válida (5 a 9 caracteres alfanuméricos)'),
+    ),
+});
+
+export type FormularioRegistrarVehiculo = z.infer<typeof esquemaRegistrarVehiculo>;
