@@ -9,3 +9,12 @@ export async function crearUsuario(datos: CrearUsuarioRequest): Promise<UsuarioR
   });
   return respuesta.data;
 }
+
+// GET /api/usuarios/yo: perfil del usuario autenticado (cualquier rol con sesión vigente).
+export async function consultarMiPerfil(signal?: AbortSignal): Promise<UsuarioResponse> {
+  const respuesta = await api.get<UsuarioResponse>('/usuarios/yo', {
+    headers: encabezadoAutorizacion(),
+    signal,
+  });
+  return respuesta.data;
+}
