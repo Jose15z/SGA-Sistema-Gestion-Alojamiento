@@ -3332,3 +3332,40 @@ textarea {
 .form-grid {
   align-items: start;
 }
+
+.preparacion-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.preparacion-lista li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11rem minmax(10rem, auto);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.preparacion-lista li + li {
+  border-top: 1px solid var(--line);
+}
+
+.preparacion-lista small {
+  display: block;
+  color: var(--muted);
+}
+
+.preparacion-lista .badge {
+  justify-self: start;
+}
+
+@media (max-width: 600px) {
+  .preparacion-lista li {
+    grid-template-columns: 1fr;
+  }
+
+  .preparacion-lista button {
+    justify-self: start;
+  }
+}

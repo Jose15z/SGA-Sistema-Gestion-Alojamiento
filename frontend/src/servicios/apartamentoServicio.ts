@@ -12,12 +12,25 @@ import { encabezadoAutorizacion } from './sesion';
 
 // GET /api/apartamentos: apartamentos activos con su estado operativo (recepción y administración).
 // El alojamiento tiene 7 (Ficha), así que una página de 10 los trae todos.
-export async function listarApartamentos(): Promise<Apartamento[]> {
+export async function listarApartamentos(signal?: AbortSignal): Promise<Apartamento[]> {
   const respuesta = await api.get<Pagina<Apartamento>>('/apartamentos', {
     headers: encabezadoAutorizacion(),
     params: { size: 10 },
+    signal,
   });
   return respuesta.data.contenido;
+}
+
+export async function cambiarPreparacion(
+  identificacion: string,
+  accion: 'iniciar-preparacion' | 'marcar-preparado',
+): Promise<Apartamento> {
+  const respuesta = await api.put<Apartamento>(
+    `/apartamentos/${encodeURIComponent(identificacion)}/${accion}`,
+    undefined,
+    { headers: encabezadoAutorizacion() },
+  );
+  return respuesta.data;
 }
 
 // POST /api/cotizaciones: valor de una estancia según las temporadas y los ocupantes facturables

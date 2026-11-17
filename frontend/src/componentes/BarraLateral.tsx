@@ -13,7 +13,7 @@ interface BarraLateralProps {
 }
 
 // Las opciones con subpantallas propias se marcan solo en su ruta exacta.
-const rutasExactas = new Set(['/recepcion', '/administracion']);
+const rutasExactas = new Set(['/recepcion']);
 
 export function BarraLateral({ rol, correo, abierta, onCerrar, onCerrarSesion }: BarraLateralProps) {
   const iniciales = correo.slice(0, 2).toUpperCase();
