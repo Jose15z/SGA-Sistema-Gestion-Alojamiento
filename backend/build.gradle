@@ -31,6 +31,7 @@ dependencies {
     implementation 'org.mapstruct:mapstruct:1.6.3'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
     // Lombok + MapStruct trabajando juntos (Guía 10)
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
